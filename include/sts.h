@@ -10,11 +10,20 @@
  *       Revision:  none
  *       Compiler:  gcc
  *
- *         Author:  Morgan Gauthier,
- *   Organization:  Continental Corporation
+ *         Author:  nisennenmondai,
+ *   Organization:  
  *
  * =============================================================================
+ * TODO
+ *      - connect to broker with params instead of hard-coding
+ *      - search for a proper architecture master/slave or identical client on
+ *        both sides?
+ *      - define type of messages
+ *      - implement ecdh protocole
+ *      - implement ecdsa protocole
+ *      - handle space character while sending mqtt message
  */
+
 #include "MQTTLinux.h"
 #include "MQTTClient.h"
 #include "ecdh.h"

@@ -197,7 +197,7 @@ int sts_ecdh_aes_test(char **argv)
     for (i = 0; i < ECDH_SHARED_KEYSIZE_BITS / BYTE; i++) {
         if (master_derived_key[i] != slave_derived_key[i]) {
             printf("sts: error! master and slave derived key not identical\n");
-            return -1;
+            return STS_PROMPT;
         }
     }
 

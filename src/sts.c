@@ -281,13 +281,13 @@ int sts_start_session(char **argv)
         return STS_PROMPT;
     }
 
-    if (argv[1] == NULL) {
-        printf("sts: you must give QoS level [0, 1 or 2]\n");
+    if (argv[1] == NULL || argv[2] != NULL) {
+        printf("sts: error! wrong number of arguments\n");
         return STS_PROMPT;
     }
 
     if (atoi(argv[1]) < 0 || atoi(argv[1]) > 2) {
-        printf("sts: wrong param, QoS must be 0, 1 or 2\n");
+        printf("sts: error! QoS must be 0, 1 or 2\n");
         return STS_PROMPT;
     }
 
@@ -447,7 +447,7 @@ static void sts_welcome(void)
     printf("| STS Master client for rabbit remote access                   |\n");
     printf("| 'help' to display command list                               |\n");
     printf("|                                                              |\n");
-    printf("| morgan.gauthier@continental-its.com                          |\n");
+    printf("| nisennenmondai@protonmail.com                                |\n");
     printf("|                                                              |\n");
     printf("+--------------------------------------------------------------+\n");
 }
