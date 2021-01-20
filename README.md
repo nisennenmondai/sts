@@ -2,4 +2,4 @@
 -------
 How to install
 
-sudo build.sh
+./build.sh
