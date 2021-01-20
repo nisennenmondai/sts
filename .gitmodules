@@ -1,0 +1,6 @@
+[submodule "lib/mbedtls"]
+	path = lib/mbedtls
+	url = https://github.com/ARMmbed/mbedtls.git
+[submodule "lib/paho-mqtt"]
+	path = lib/paho-mqtt
+	url = https://github.com/eclipse/paho.mqtt.embedded-c.git
