@@ -14,14 +14,6 @@
  *   Organization:  
  *
  * =============================================================================
- * TODO
- *      - connect to broker with params instead of hard-coding
- *      - search for a proper architecture master/slave or identical client on
- *        both sides?
- *      - define type of messages
- *      - implement ecdh protocole
- *      - implement ecdsa protocole
- *      - handle space character while sending mqtt message
  */
 
 #include "MQTTLinux.h"
@@ -60,47 +52,47 @@
 #define ECDH_SHARED_KEYSIZE_BYTES ECDH_SHARED_KEYSIZE_BITS / BYTE
 
 enum sts_return_value {
-    STS_EXIT   = 0,
-    STS_PROMPT = 1,
+        STS_EXIT   = 0,
+        STS_PROMPT = 1,
 };
 
 enum sts_clients {
-    STS_MASTER   = 0,
-    STS_SLAVE    = 1,
+        STS_MASTER   = 0,
+        STS_SLAVE    = 1,
 };
 
 /* types of message that can be sent between the two clients */
 enum sts_msg_type {
-    STS_CMD = 'C', /* user keyboard input command */
+        STS_CMD = 'C', /* user keyboard input command */
 };
 
 enum sts_status {
-    STS_STARTED = 0,
-    STS_STOPPED = 1,
+        STS_STARTED = 0,
+        STS_STOPPED = 1,
 };
 
 enum sts_thrd_msg_type {
-    STS_KILL_THREAD = 1,
+        STS_KILL_THREAD = 1,
 };
 
 struct sts_context {
-    unsigned int mqtt_version;
-    unsigned int qos;
-    unsigned int port;
-    unsigned int keep_alive;
-    unsigned int clean_session;
-    unsigned int msg_sent;
-    unsigned int msg_recv;
-    unsigned short sts_status;
-    const char *topic_sub;
-    const char *topic_pub;
-    char *clientid;
-    char *username;
-    char *password;
-    char *ip;
-    Network network;
-    MQTTClient client;
-    mbedtls_ecdh_context master_ecdh_ctx;
+        unsigned int mqtt_version;
+        unsigned int qos;
+        unsigned int port;
+        unsigned int keep_alive;
+        unsigned int clean_session;
+        unsigned int msg_sent;
+        unsigned int msg_recv;
+        unsigned short sts_status;
+        const char *topic_sub;
+        const char *topic_pub;
+        char *clientid;
+        char *username;
+        char *password;
+        char *ip;
+        Network network;
+        MQTTClient client;
+        mbedtls_ecdh_context master_ecdh_ctx;
 };
 
 /* sts commands */
