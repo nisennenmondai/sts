@@ -81,6 +81,8 @@ int sts_num_builtins(void) {
 ////////////////////////////////////////////////////////////////////////////////
 /* STS COMMANDS */
 ////////////////////////////////////////////////////////////////////////////////
+
+/* TODO this should not be use for cryptography, use mbedtls for rnd number */
 static int genrand(void *rng_state, unsigned char *output, size_t len)
 {
         size_t use_len;
@@ -95,7 +97,8 @@ static int genrand(void *rng_state, unsigned char *output, size_t len)
                 if (use_len > sizeof(int))
                         use_len = sizeof(int);
 
-                rnd = rand();
+                srand(time(NULL));
+                rnd = rand()%10000;
                 memcpy(output, &rnd, use_len);
                 output += use_len;
                 len -= use_len;
@@ -164,7 +167,6 @@ static void sts_prep_cmd(char *cmd)
 
 static void _on_msg_recv(MessageData *data)
 {
-        /* here execute a handler if you want to do more than printf */
         _prep_sts_msg(data);
         printf("> %s\n", sts_msg_inc);
         ctx.msg_recv++;

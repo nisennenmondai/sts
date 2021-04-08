@@ -31,7 +31,6 @@
 #define MQTT_VERSION             4
 #define MQTT_DEFAULT_PORT        1883
 #define MQTT_DEFAULT_QOS         0
-#define MQTT_VERSION             4
 #define MQTT_CLEAN_SESSION       1
 #define MQTT_KEEP_ALIVE_INTERVAL 0
 #define MQTT_IS_RETAINED         0
