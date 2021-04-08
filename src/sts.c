@@ -12,17 +12,6 @@
 /* VARIABLES */
 ////////////////////////////////////////////////////////////////////////////////
 static struct sts_context ctx = {
-        .mqtt_version   = MQTT_VERSION,
-        .qos            = MQTT_DEFAULT_QOS,
-        .port           = MQTT_DEFAULT_PORT,
-        .keep_alive     = MQTT_KEEP_ALIVE_INTERVAL,
-        .clean_session  = MQTT_CLEAN_SESSION,
-        .clientid       = MQTT_DEFAULT_CLIENTID,
-        .username       = MQTT_DEFAULT_USER,
-        .password       = MQTT_DEFAULT_PASSWORD,
-        .ip             = MQTT_DEFAULT_BROKER_IP,
-        .topic_sub      = MQTT_TOPIC_SUBSCRIBE,
-        .topic_pub      = MQTT_TOPIC_PUBLISH,
         .sts_status     = STS_STOPPED,
         .msg_sent       = 0,
         .msg_recv       = 0,
@@ -54,7 +43,7 @@ char *builtin_cmd[] = {
 char *builtin_cmd_desc[] = {
         "help              Prints all commands                        |",
         "exit              Exit shell                                 |",
-        "start [QOS]       Start STS session                          |",
+        "start             Start STS session                          |",
         "stop              Stop STS session                           |",
         "send [COMMAND]    Send a command to the remote host          |\n"
                 "|                   Use '|' for adding space example:          |\n"
@@ -82,7 +71,7 @@ int sts_num_builtins(void) {
 /* STS COMMANDS */
 ////////////////////////////////////////////////////////////////////////////////
 
-/* TODO this should not be use for cryptography, use mbedtls for rnd number */
+/* TODO this should not be used for cryptography, use mbedtls for rnd number */
 static int genrand(void *rng_state, unsigned char *output, size_t len)
 {
         size_t use_len;
@@ -173,12 +162,67 @@ static void _on_msg_recv(MessageData *data)
         free(sts_msg_inc);
 }
 
-static void _init(void)
+static int _load_config(void)
 {
+        FILE *fp;
+        fp = fopen("../sts.config", "r");
+        if (fp == NULL)
+        {
+                printf("sts: error! while opening config file.\n");
+                return -1;
+        }
+
+        char key[16] = {0};
+        char comp[2] = {0};
+        char value[CONFIG_VALUE_MAXLENGTH] = {0};
+
+        while (fscanf(fp, "%s %s %s ", key, comp, value) != EOF) {
+                if (strcmp(key, "ip") == 0) {
+                        strcpy(ctx.ip, value);
+                } else if (strcmp(key, "port") == 0) {
+                        ctx.port = atoi(value);
+                } else if (strcmp(key, "qos") == 0) {
+                        ctx.qos = atoi(value);
+                } else if (strcmp(key, "username") == 0) {
+                        strcpy(ctx.username, value);
+                } else if (strcmp(key, "password") == 0) {
+                        strcpy(ctx.password, value);
+                } else if (strcmp(key, "subtop") == 0) {
+                        strcpy(ctx.topic_sub, value);
+                } else if (strcmp(key, "pubtop") == 0) {
+                        strcpy(ctx.topic_pub, value);
+                } else if (strcmp(key, "version") == 0) {
+                        ctx.mqtt_version = atoi(value);
+                } else if (strcmp(key, "clientid") == 0) {
+                        strcpy(ctx.clientid, value);
+                } else if (strcmp(key, "clean_session") == 0) {
+                        ctx.clean_session = atoi(value);
+                } else if (strcmp(key, "keep_alive") == 0) {
+                        ctx.keep_alive = atoi(value);
+                } else if (strcmp(key, "is_retained") == 0) {
+                        ctx.is_retained = atoi(value);
+                } else {
+                        printf("sts: error! wrong key in config file, please "
+                                        "see template 'sts.config'\n");
+                        return -1;
+                }
+        }
+        fclose(fp);
+        return 0;
+}
+
+static int _init(void)
+{
+        int ret = _load_config();
+        if (ret < 0) {
+                return -1;
+        }
+
         NetworkInit(&ctx.network);
         MQTTClientInit(&ctx.client, &ctx.network, COMMAND_TIMEOUT_MS,
                         sendbuff, SENDBUFFSIZE, readbuff, READBUFFSIZE);
         printf("sts: network and client initialized\n");
+        return 0;
 }
 
 static int _init_sec(void)
@@ -198,10 +242,9 @@ static int _init_sec(void)
         return 0;
 }
 
-static int _connect(unsigned int qos)
+static int _connect(void)
 {
         int ret = 0;
-        ctx.qos = qos;
 
         /* setting conn params */
         MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
@@ -278,30 +321,20 @@ static void _free_sec(void)
 
 int sts_start_session(char **argv)
 {
+        (void)argv;
         int ret = 0;
-        if (ctx.sts_status == STS_STARTED) {
+        if (ctx.sts_status == STS_STARTED || ctx.client.isconnected == 1) {
                 printf("sts: an sts session has already been started\n");
                 return STS_PROMPT;
         }
 
-        if (argv[1] == NULL || argv[2] != NULL) {
-                printf("sts: error! wrong number of arguments\n");
+        ret = _init();
+        if (ret < 0) {
+                printf("sts: error! could not initialize\n");
                 return STS_PROMPT;
         }
 
-        if (atoi(argv[1]) < 0 || atoi(argv[1]) > 2) {
-                printf("sts: error! QoS must be 0, 1 or 2\n");
-                return STS_PROMPT;
-        }
-
-        if (ctx.client.isconnected == 1) {
-                printf("sts: error! sts session started already\n");
-                return STS_PROMPT;
-        }
-
-        _init();
-
-        ret = _connect(atoi(argv[1])); 
+        ret = _connect(); 
         if (ret < 0) {
                 printf("sts: error! could not connect to broker\n");
                 _disconnect();
@@ -372,7 +405,7 @@ int sts_send_cmd(char **string)
         msg.qos = ctx.qos;
         msg.payload = (void*)sts_cmd_out;
         msg.payloadlen = strlen(sts_cmd_out);
-        msg.retained = MQTT_IS_RETAINED;
+        msg.retained = ctx.is_retained;
 
         /* echo */
         printf("%s\n", sts_cmd_out);
@@ -429,7 +462,7 @@ int sts_status(char **argv)
         printf("sts: qos:             %u\n", ctx.qos);
         printf("sts: keep_alive:      %u\n", ctx.keep_alive);
         printf("sts: clean_session:   %u\n", ctx.clean_session);
-        printf("sts: is_retained      %u\n", MQTT_IS_RETAINED);
+        //printf("sts: is_retained      %u\n", MQTT_IS_RETAINED);
         printf("sts: publish_topic:   %s\n", ctx.topic_pub);
         printf("sts: subscribe_topic: %s\n", ctx.topic_sub);
         printf("sts: msg sent:        %u\n", ctx.msg_sent);
@@ -447,7 +480,6 @@ static void sts_welcome(void)
         printf("|                    Secure Telemetry Shell                    |\n");
         printf("+--------------------------------------------------------------+\n");
         printf("|                                                              |\n");
-        printf("| STS Master client for rabbit remote access                   |\n");
         printf("| 'help' to display command list                               |\n");
         printf("|                                                              |\n");
         printf("| nisennenmondai@protonmail.com                                |\n");

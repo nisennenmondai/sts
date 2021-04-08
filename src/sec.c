@@ -5,7 +5,7 @@
 
 #include "sts.h"
 
-/* TODO this should not be use for cryptography, use mbedtls for rnd number */
+/* TODO this should not be used for cryptography, use mbedtls for rnd number */
 static int genrand(void *rng_state, unsigned char *output, size_t len)
 {
         size_t use_len;

@@ -21,22 +21,11 @@
 #include "ecdh.h"
 #include "aes.h"
 
-/* mqtt params */
-#define MQTT_DEFAULT_BROKER_IP   "52.0.95.150"
-#define MQTT_DEFAULT_CLIENTID    "master"
-#define MQTT_DEFAULT_USER        "rabbit2"
-#define MQTT_DEFAULT_PASSWORD    "youknowwhatyoudoing"
-#define MQTT_TOPIC_SUBSCRIBE     "message/"
-#define MQTT_TOPIC_PUBLISH       "command/"
-#define MQTT_VERSION             4
-#define MQTT_DEFAULT_PORT        1883
-#define MQTT_DEFAULT_QOS         0
-#define MQTT_CLEAN_SESSION       1
-#define MQTT_KEEP_ALIVE_INTERVAL 0
-#define MQTT_IS_RETAINED         0
+/* init */
 #define READBUFFSIZE             1024
 #define SENDBUFFSIZE             1024
 #define COMMAND_TIMEOUT_MS       10000
+#define CONFIG_VALUE_MAXLENGTH   64
 
 /* shell parsing */
 #define STS_TOK_BUFFSIZE         64
@@ -80,15 +69,16 @@ struct sts_context {
         unsigned int port;
         unsigned int keep_alive;
         unsigned int clean_session;
+        unsigned int is_retained;
         unsigned int msg_sent;
         unsigned int msg_recv;
         unsigned short sts_status;
-        const char *topic_sub;
-        const char *topic_pub;
-        char *clientid;
-        char *username;
-        char *password;
-        char *ip;
+        char topic_sub[CONFIG_VALUE_MAXLENGTH];
+        char topic_pub[CONFIG_VALUE_MAXLENGTH];
+        char clientid[CONFIG_VALUE_MAXLENGTH];
+        char username[CONFIG_VALUE_MAXLENGTH];
+        char password[CONFIG_VALUE_MAXLENGTH];
+        char ip[16];
         Network network;
         MQTTClient client;
         mbedtls_ecdh_context master_ecdh_ctx;
