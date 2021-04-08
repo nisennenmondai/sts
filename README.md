@@ -10,11 +10,12 @@ TODO
 - I want to be able to save parameters of broker in a config file and load them
   that includes sub and pub topic.
 - I want the status command to display more information about the security.
-- I want to move the keygeneration to secure mode only. So it should not be by
-  default.
+- I want to move the keygeneration to encrypted mode only. So it should not be 
+  by default.
 
 2 - IMPLEMENT SECURITY FEATURES
 - I want to be able to send encrypted message to a remote client, that includes
   having a key exchange protocole.
-- I want to have a secure mode and non secure mode.
+- I want to have an encrypted mode and non encrypted mode.
+- I want to support a better AES algorithm than ECB
 
