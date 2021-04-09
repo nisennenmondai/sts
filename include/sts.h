@@ -15,6 +15,10 @@
  *
  * =============================================================================
  */
+#ifndef STS_H
+#define STS_H
+
+#include <stdlib.h>
 
 #include "MQTTLinux.h"
 #include "MQTTClient.h"
@@ -27,7 +31,7 @@
 #define COMMAND_TIMEOUT_MS        10000
 #define CONFIG_VALUE_MAXLENGTH    64
 
-/* shell parsing */
+/* shell */
 #define STS_TOK_BUFFSIZE          64
 #define STS_RL_BUFFSIZE           1024
 #define STS_TOK_DELIM             " \t\r\n\a"
@@ -35,28 +39,20 @@
 /* sec */
 #define BYTE                      8
 #define AES_ECB_BLOCKSIZE         16
-#define STS_MSG_MAXLEN            256 /* must be identical to slave client */
+#define STS_MSG_MAXLEN            256
 #define ECDH_SHARED_KEYSIZE_BITS  256
 #define ECDH_SHARED_KEYSIZE_BYTES ECDH_SHARED_KEYSIZE_BITS / BYTE
 
-enum sts_return_value {
-        STS_EXIT   = 0,
-        STS_PROMPT = 1,
-};
-
-enum sts_clients {
-        STS_MASTER   = 0,
-        STS_SLAVE    = 1,
-};
-
-enum sts_status {
-        STS_STARTED = 0,
-        STS_STOPPED = 1,
-};
-
-enum sts_thrd_msg_type {
-        STS_KILL_THREAD = 1,
-};
+/* client */
+#define STS_EXIT    0
+#define STS_PROMPT  1
+#define STS_HOST    0
+#define STS_REMOTE  1
+#define STS_STARTED 0
+#define STS_STOPPED 1
+#define STS_UNENCRYPTED 0
+#define STS_ENCRYPTED   1
+#define STS_KILL_THREAD 1
 
 struct sts_context {
         unsigned int mqtt_version;
@@ -67,7 +63,8 @@ struct sts_context {
         unsigned int is_retained;
         unsigned int msg_sent;
         unsigned int msg_recv;
-        unsigned short sts_status;
+        unsigned short status;
+        unsigned short encryption;
         char topic_sub[CONFIG_VALUE_MAXLENGTH];
         char topic_pub[CONFIG_VALUE_MAXLENGTH];
         char clientid[CONFIG_VALUE_MAXLENGTH];
@@ -76,7 +73,7 @@ struct sts_context {
         char ip[16];
         Network network;
         MQTTClient client;
-        mbedtls_ecdh_context master_ecdh_ctx;
+        mbedtls_ecdh_context host_ecdh_ctx;
 };
 
 /* sts commands */
@@ -87,3 +84,5 @@ int sts_stop_session(char **argv);
 int sts_send(char **argv);
 int sts_status(char **argv);
 int sts_ecdh_aes_test(char **argv);
+int genrand(void *rng_state, unsigned char *output, size_t len);
+#endif /* STS_H */

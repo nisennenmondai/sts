@@ -1,12 +1,11 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
 #include "sts.h"
 
 /* TODO this should not be used for cryptography, use mbedtls for rnd number */
-static int genrand(void *rng_state, unsigned char *output, size_t len)
+int genrand(void *rng_state, unsigned char *output, size_t len)
 {
         size_t use_len;
         int rnd;
@@ -21,7 +20,7 @@ static int genrand(void *rng_state, unsigned char *output, size_t len)
                         use_len = sizeof(int);
 
                 srand(time(NULL));
-                rnd = rand()%10000;
+                rnd = rand()%100;
                 memcpy(output, &rnd, use_len);
                 output += use_len;
                 len -= use_len;
@@ -33,11 +32,11 @@ static void _print_derived_key(const unsigned char *buf, size_t size, int client
 {
         size_t i;
         if (client == 0) {
-                printf("sts: master derived shared_key: ");
+                printf("sts: host derived shared_key:   ");
         }
 
         if (client == 1) {
-                printf("\nsts: slave derived shared_key: ");
+                printf("\nsts: remote derived shared_key: ");
         }
 
         for (i = 0 ; i < size; i++) {
@@ -144,70 +143,70 @@ int sts_ecdh_aes_test(char **argv)
         char *msg = argv[1];
         int msg_size = 0;
 
-        mbedtls_ecdh_context master_ecdh_ctx;
-        mbedtls_ecdh_context slave_ecdh_ctx;
-        mbedtls_aes_context master_aes_ctx;
-        mbedtls_aes_context slave_aes_ctx;
+        mbedtls_ecdh_context host_ecdh_ctx;
+        mbedtls_ecdh_context remote_ecdh_ctx;
+        mbedtls_aes_context host_aes_ctx;
+        mbedtls_aes_context remote_aes_ctx;
 
-        unsigned char master_derived_key[ECDH_SHARED_KEYSIZE_BYTES];
-        unsigned char slave_derived_key[ECDH_SHARED_KEYSIZE_BYTES];
+        unsigned char host_derived_key[ECDH_SHARED_KEYSIZE_BYTES];
+        unsigned char remote_derived_key[ECDH_SHARED_KEYSIZE_BYTES];
         unsigned char message[STS_MSG_MAXLEN];
         unsigned char enc_msg[STS_MSG_MAXLEN];
         unsigned char dec_msg[STS_MSG_MAXLEN];
 
-        /* init mbedtls context and generate keypair for master and slave clients */
-        mbedtls_ecdh_init(&master_ecdh_ctx);
-        mbedtls_ecdh_setup(&master_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
-        mbedtls_ecdh_gen_public(&master_ecdh_ctx.grp, &master_ecdh_ctx.d, 
-                        &master_ecdh_ctx.Q, genrand, NULL);
-        printf("sts: master private key: %lu\n", *master_ecdh_ctx.d.p);
-        printf("sts: master public key X:%lu Y:%lu Z:%lu\n\n", 
-                        *master_ecdh_ctx.Q.X.p, *master_ecdh_ctx.Q.Y.p, 
-                        *master_ecdh_ctx.Q.Z.p);
+        /* init mbedtls context and generate keypair for host and remote clients */
+        mbedtls_ecdh_init(&host_ecdh_ctx);
+        mbedtls_ecdh_setup(&host_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
+        mbedtls_ecdh_gen_public(&host_ecdh_ctx.grp, &host_ecdh_ctx.d, 
+                        &host_ecdh_ctx.Q, genrand, NULL);
+        printf("sts: host private key: %lu\n", *host_ecdh_ctx.d.p);
+        printf("sts: host public key X:%lu Y:%lu Z:%lu\n\n", 
+                        *host_ecdh_ctx.Q.X.p, *host_ecdh_ctx.Q.Y.p, 
+                        *host_ecdh_ctx.Q.Z.p);
 
-        mbedtls_ecdh_init(&slave_ecdh_ctx);
-        mbedtls_ecdh_setup(&slave_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
-        mbedtls_ecdh_gen_public(&slave_ecdh_ctx.grp, &slave_ecdh_ctx.d, 
-                        &slave_ecdh_ctx.Q, genrand, NULL);
-        printf("sts: slave private key: %lu\n", *slave_ecdh_ctx.d.p);
-        printf("sts: slave public key X:%lu Y:%lu Z:%lu\n\n", *slave_ecdh_ctx.Q.X.p, 
-                        *slave_ecdh_ctx.Q.Y.p, *slave_ecdh_ctx.Q.Z.p);
+        mbedtls_ecdh_init(&remote_ecdh_ctx);
+        mbedtls_ecdh_setup(&remote_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
+        mbedtls_ecdh_gen_public(&remote_ecdh_ctx.grp, &remote_ecdh_ctx.d, 
+                        &remote_ecdh_ctx.Q, genrand, NULL);
+        printf("sts: remote private key: %lu\n", *remote_ecdh_ctx.d.p);
+        printf("sts: remote public key X:%lu Y:%lu Z:%lu\n\n", *remote_ecdh_ctx.Q.X.p, 
+                        *remote_ecdh_ctx.Q.Y.p, *remote_ecdh_ctx.Q.Z.p);
 
         /* exchange public key */
-        mbedtls_ecp_copy(&master_ecdh_ctx.Qp, &slave_ecdh_ctx.Q);
-        mbedtls_ecp_copy(&slave_ecdh_ctx.Qp, &master_ecdh_ctx.Q);
+        mbedtls_ecp_copy(&host_ecdh_ctx.Qp, &remote_ecdh_ctx.Q);
+        mbedtls_ecp_copy(&remote_ecdh_ctx.Qp, &host_ecdh_ctx.Q);
 
         /* derive shared secret */
-        mbedtls_ecdh_calc_secret(&master_ecdh_ctx, &olen, master_derived_key, 
-                        sizeof(master_derived_key), genrand, NULL);
-        mbedtls_ecdh_calc_secret(&slave_ecdh_ctx, &olen, slave_derived_key, 
-                        sizeof(slave_derived_key), genrand, NULL);
+        mbedtls_ecdh_calc_secret(&host_ecdh_ctx, &olen, host_derived_key, 
+                        sizeof(host_derived_key), genrand, NULL);
+        mbedtls_ecdh_calc_secret(&remote_ecdh_ctx, &olen, remote_derived_key, 
+                        sizeof(remote_derived_key), genrand, NULL);
 
-        _print_derived_key(master_derived_key, sizeof(master_derived_key), STS_MASTER);
-        _print_derived_key(slave_derived_key, sizeof(slave_derived_key), STS_SLAVE);
+        _print_derived_key(host_derived_key, sizeof(host_derived_key), STS_HOST);
+        _print_derived_key(remote_derived_key, sizeof(remote_derived_key), STS_REMOTE);
 
         /* check if shared secret is valid */
-        ret = _verify_derived_keylen(master_derived_key, sizeof(master_derived_key), 
+        ret = _verify_derived_keylen(host_derived_key, sizeof(host_derived_key), 
                         ECDH_SHARED_KEYSIZE_BITS);
         if (ret == -1) {
                 return STS_PROMPT;
         }
-        ret = _verify_derived_keylen(slave_derived_key, sizeof(slave_derived_key), 
+        ret = _verify_derived_keylen(remote_derived_key, sizeof(remote_derived_key), 
                         ECDH_SHARED_KEYSIZE_BITS);
         if (ret == -1) {
                 return STS_PROMPT;
         }
 
         for (i = 0; i < ECDH_SHARED_KEYSIZE_BITS / BYTE; i++) {
-                if (master_derived_key[i] != slave_derived_key[i]) {
-                        printf("sts: error! master and slave derived key not identical\n");
+                if (host_derived_key[i] != remote_derived_key[i]) {
+                        printf("sts: error! host and remote derived key not identical\n");
                         return STS_PROMPT;
                 }
         }
 
         /* init ctx */
-        mbedtls_aes_init(&master_aes_ctx);
-        mbedtls_aes_init(&slave_aes_ctx);
+        mbedtls_aes_init(&host_aes_ctx);
+        mbedtls_aes_init(&remote_aes_ctx);
         memset(message, 0, STS_MSG_MAXLEN);
         memset(enc_msg, 0, STS_MSG_MAXLEN);
         memset(dec_msg, 0, STS_MSG_MAXLEN);
@@ -231,23 +230,23 @@ int sts_ecdh_aes_test(char **argv)
         }
         printf("\nsts: message size: %d\n\n", msg_size);
 
-        /* set encryption key for master and decryption key for slave */
-        mbedtls_aes_setkey_enc(&master_aes_ctx, master_derived_key, 
+        /* set encryption key for host and decryption key for remote */
+        mbedtls_aes_setkey_enc(&host_aes_ctx, host_derived_key, 
                         ECDH_SHARED_KEYSIZE_BITS); 
-        mbedtls_aes_setkey_dec(&slave_aes_ctx, slave_derived_key, 
+        mbedtls_aes_setkey_dec(&remote_aes_ctx, remote_derived_key, 
                         ECDH_SHARED_KEYSIZE_BITS); 
 
         /* encrypt and decrypt data */
-        _encrypt(&master_aes_ctx, message, enc_msg, msg_size);
-        _decrypt(&slave_aes_ctx, enc_msg, dec_msg, msg_size);
-        printf("sts: encrypted message on master side: %s\n\n", enc_msg);
-        printf("sts: decrypted message on slave side: %s\n\n", dec_msg);
+        _encrypt(&host_aes_ctx, message, enc_msg, msg_size);
+        _decrypt(&remote_aes_ctx, enc_msg, dec_msg, msg_size);
+        printf("sts: encrypted message on host side: %s\n\n", enc_msg);
+        printf("sts: decrypted message on remote side: %s\n\n", dec_msg);
 
         /* free */
-        mbedtls_ecdh_free(&master_ecdh_ctx);
-        mbedtls_ecdh_free(&slave_ecdh_ctx);
-        mbedtls_aes_free(&master_aes_ctx); 
-        mbedtls_aes_free(&slave_aes_ctx);
+        mbedtls_ecdh_free(&host_ecdh_ctx);
+        mbedtls_ecdh_free(&remote_ecdh_ctx);
+        mbedtls_aes_free(&host_aes_ctx); 
+        mbedtls_aes_free(&remote_aes_ctx);
 
         return STS_PROMPT;
 }

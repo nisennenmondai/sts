@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -12,7 +11,8 @@
 /* VARIABLES */
 ////////////////////////////////////////////////////////////////////////////////
 static struct sts_context ctx = {
-        .sts_status     = STS_STOPPED,
+        .status     = STS_STOPPED,
+        .encryption = 0, /* default */
         .msg_sent       = 0,
         .msg_recv       = 0,
 };
@@ -41,16 +41,14 @@ char *builtin_cmd[] = {
 };
 
 char *builtin_cmd_desc[] = {
-        "help              Prints all commands                        |",
-        "exit              Exit shell                                 |",
-        "start             Start STS session                          |",
-        "stop              Stop STS session                           |",
-        "send [COMMAND]    Send a command to the remote host          |\n"
-                "|                   Use '|' for adding space example:          |\n"
-                "|                   'sts status' type 'send sts|status'        |\n"
-                "|                   'sts stdio_w' type 'send sts|stdio_w'      |",
-        "status            Display status of curret session           |",
-        "sectest [MSG]     ECDH AES enc/dec TEST (no space in MSG)    |",
+        "help              prints all commands                        |",
+        "exit              exit shell                                 |",
+        "start [CONFIG]    start STS session                          |",
+        "stop              stop STS session                           |",
+        "send [MSG]        send a message to the broker               |",
+        "                  example: 'send blah1 blah2 blah3'          |\n| "
+        "status            display status of current session          |",
+        "sectest [MSG]     ecdh aes enc/dec test (no space)           |",
 };
 
 int (*builtin_func[]) (char **argv) = {
@@ -70,30 +68,6 @@ int sts_num_builtins(void) {
 ////////////////////////////////////////////////////////////////////////////////
 /* STS COMMANDS */
 ////////////////////////////////////////////////////////////////////////////////
-
-/* TODO this should not be used for cryptography, use mbedtls for rnd number */
-static int genrand(void *rng_state, unsigned char *output, size_t len)
-{
-        size_t use_len;
-        int rnd;
-
-        if (rng_state != NULL)
-                rng_state  = NULL;
-
-        while (len > 0)
-        {
-                use_len = len;
-                if (use_len > sizeof(int))
-                        use_len = sizeof(int);
-
-                srand(time(NULL));
-                rnd = rand()%10000;
-                memcpy(output, &rnd, use_len);
-                output += use_len;
-                len -= use_len;
-        }
-        return 0;
-}
 
 static void _concatenate(char p[], char q[]) {
         int c = 0;
@@ -119,11 +93,14 @@ static void *_mqttyield(void *argv)
         while (1) {
                 if (thrd_msg_type == STS_KILL_THREAD || ctx.client.isconnected == 0) {
                         printf("sts: stopping mqttyield thread...\n");
+                        printf("sts: terminating sts client...\n");
                         thrd_msg_type = 0;
+                        ctx.status = STS_STOPPED;
                         return NULL;
                 }
                 if ((ret = MQTTYield(&ctx.client, 1000)) != 0) {
                         printf("sts: error while MQTTYield()(%d)\n", ret);
+                        thrd_msg_type = STS_KILL_THREAD;
                 }
         }
         return NULL;
@@ -135,21 +112,26 @@ static void _prep_msg_inc(MessageData *data)
         memcpy(sts_msg_inc, data->message->payload, data->message->payloadlen);
 }
 
-static void _prep_msg_out(char *message)
+static void _prep_msg_out(char **message)
 {
-        int i;
-        int len = strlen(message);
-        char msg[len + 1];
-        memset(msg, 0, sizeof(msg));
-        for (i = 0; i < len + 1; i++) {
-                msg[i] = message[i];
-                if (msg[i] == '|') {
-                        msg[i] = ' ';
-                }
-        }
+        int i = 1;
+        size_t msg_size = 0;
 
-        sts_msg_out = calloc(0, sizeof(len + 1));
-        strcpy(sts_msg_out, msg);
+        /* compute size of msg */
+        while (message[i] != NULL) {
+                msg_size += strlen(message[i] + 1);
+                i++;
+        }
+        sts_msg_out = malloc(sizeof(msg_size));
+        memset(sts_msg_out, 0, sizeof(msg_size));
+
+        /* copy */
+        i = 1;
+        while (message[i] != NULL) {
+                _concatenate(sts_msg_out, message[i]);
+                _concatenate(sts_msg_out, " ");
+                i++;
+        }
 }
 
 static void _on_msg_recv(MessageData *data)
@@ -160,13 +142,13 @@ static void _on_msg_recv(MessageData *data)
         free(sts_msg_inc);
 }
 
-static int _load_config(void)
+static int _load_config(const char *config)
 {
         FILE *fp;
-        fp = fopen("../sts.config", "r");
+        fp = fopen(config, "r");
         if (fp == NULL)
         {
-                printf("sts: error! while opening config file.\n");
+                printf("sts: error! while opening config file -> start [FILE]\n");
                 return -1;
         }
 
@@ -189,7 +171,7 @@ static int _load_config(void)
                         strcpy(ctx.topic_sub, value);
                 } else if (strcmp(key, "pubtop") == 0) {
                         strcpy(ctx.topic_pub, value);
-                } else if (strcmp(key, "version") == 0) {
+                } else if (strcmp(key, "mqtt_version") == 0) {
                         ctx.mqtt_version = atoi(value);
                 } else if (strcmp(key, "clientid") == 0) {
                         strcpy(ctx.clientid, value);
@@ -199,19 +181,22 @@ static int _load_config(void)
                         ctx.keep_alive = atoi(value);
                 } else if (strcmp(key, "is_retained") == 0) {
                         ctx.is_retained = atoi(value);
+                } else if (strcmp(key, "encryption") == 0) {
+                        ctx.encryption = atoi(value);
                 } else {
                         printf("sts: error! wrong key in config file, please "
-                                        "see template 'sts.config'\n");
+                                        "see 'template_config'\n");
                         return -1;
                 }
         }
         fclose(fp);
+        config = NULL;
         return 0;
 }
 
-static int _init(void)
+static int _init(const char *config)
 {
-        int ret = _load_config();
+        int ret = _load_config(config);
         if (ret < 0) {
                 return -1;
         }
@@ -226,13 +211,13 @@ static int _init(void)
 static int _init_sec(void)
 {
         int ret;
-        mbedtls_ecdh_init(&ctx.master_ecdh_ctx);
-        ret = mbedtls_ecdh_setup(&ctx.master_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
+        mbedtls_ecdh_init(&ctx.host_ecdh_ctx);
+        ret = mbedtls_ecdh_setup(&ctx.host_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
         if (ret < 0) {
                 return -1;
         }
-        ret = mbedtls_ecdh_gen_public(&ctx.master_ecdh_ctx.grp, &ctx.master_ecdh_ctx.d, 
-                        &ctx.master_ecdh_ctx.Q, genrand, NULL);
+        ret = mbedtls_ecdh_gen_public(&ctx.host_ecdh_ctx.grp, &ctx.host_ecdh_ctx.d, 
+                        &ctx.host_ecdh_ctx.Q, genrand, NULL);
         if (ret < 0) {
                 return -1;
         }
@@ -306,7 +291,7 @@ static void _disconnect(void)
                 return;
         }
         NetworkDisconnect(&ctx.network);
-        ctx.sts_status = STS_STOPPED;
+        ctx.status = STS_STOPPED;
         ctx.msg_sent = 0;
         ctx.msg_recv = 0;
         printf("sts: disconnected from broker\n");
@@ -314,19 +299,24 @@ static void _disconnect(void)
 
 static void _free_sec(void)
 {
-        mbedtls_ecdh_free(&ctx.master_ecdh_ctx);
+        mbedtls_ecdh_free(&ctx.host_ecdh_ctx);
 }
 
 int sts_start_session(char **argv)
 {
         (void)argv;
         int ret = 0;
-        if (ctx.sts_status == STS_STARTED || ctx.client.isconnected == 1) {
+        if (ctx.status == STS_STARTED || ctx.client.isconnected == 1) {
                 printf("sts: an sts session has already been started\n");
                 return STS_PROMPT;
         }
 
-        ret = _init();
+        if (argv[1] == NULL) {
+                printf("sts: error! config file missing\n");
+                return STS_PROMPT;
+        }
+
+        ret = _init(argv[1]);
         if (ret < 0) {
                 printf("sts: error! could not initialize\n");
                 return STS_PROMPT;
@@ -346,14 +336,17 @@ int sts_start_session(char **argv)
                 return STS_PROMPT;
         }
 
-        ret = _init_sec();
-        if (ret < 0) {
-                printf("sts: error! while initialization of security\n");
-                _disconnect();
-                _free_sec();
-                return STS_PROMPT;
+        if (ctx.encryption == 1) {
+                ret = _init_sec();
+                if (ret < 0) {
+                        printf("sts: error! while initialization of security\n");
+                        _disconnect();
+                        _free_sec();
+                        return STS_PROMPT;
+                }
         }
-        ctx.sts_status = STS_STARTED;
+
+        ctx.status = STS_STARTED;
         return STS_PROMPT;
 }
 
@@ -361,7 +354,7 @@ int sts_stop_session(char **argv)
 {
         (void)argv;
         int ret;
-        if (ctx.sts_status == STS_STOPPED) {
+        if (ctx.status == STS_STOPPED) {
                 printf("sts: error! no sts session currently active\n");
                 return STS_PROMPT;
         }
@@ -379,20 +372,21 @@ int sts_stop_session(char **argv)
         return STS_PROMPT;
 }
 
-int sts_send(char **string)
+int sts_send(char **message)
 {
         int ret = 0;
-        if (ctx.sts_status == STS_STOPPED) {
+
+        if (ctx.status == STS_STOPPED) {
                 printf("sts: error! start an sts session first\n");
                 return STS_PROMPT;
         }
 
-        if (string[1] == NULL) {
-                printf("sts: missing argument! -> 'send [COMMAND]'\n");
+        if (message[1] == NULL) {
+                printf("sts: error! missing param -> 'send [MSG]'\n");
                 return STS_PROMPT;
         }
 
-        _prep_msg_out(string[1]);
+        _prep_msg_out(message);
 
         MQTTMessage msg;
         msg.qos = ctx.qos;
@@ -440,7 +434,7 @@ int sts_status(char **argv)
 {
         (void)argv;
 
-        if (ctx.client.isconnected == 0 && ctx.sts_status == STS_STOPPED) {
+        if (ctx.client.isconnected == 0 && ctx.status == STS_STOPPED) {
                 printf("sts: status:          OFFLINE\n");
                 return STS_PROMPT;
         }
@@ -460,6 +454,7 @@ int sts_status(char **argv)
         printf("sts: subscribe_topic: %s\n", ctx.topic_sub);
         printf("sts: msg sent:        %u\n", ctx.msg_sent);
         printf("sts: msg received:    %u\n", ctx.msg_recv);
+        printf("sts: encryption:      %u\n", ctx.encryption);
 
         return STS_PROMPT;
 }
