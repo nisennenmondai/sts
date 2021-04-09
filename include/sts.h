@@ -22,21 +22,21 @@
 #include "aes.h"
 
 /* init */
-#define READBUFFSIZE             1024
-#define SENDBUFFSIZE             1024
-#define COMMAND_TIMEOUT_MS       10000
-#define CONFIG_VALUE_MAXLENGTH   64
+#define READBUFFSIZE              1024
+#define SENDBUFFSIZE              1024
+#define COMMAND_TIMEOUT_MS        10000
+#define CONFIG_VALUE_MAXLENGTH    64
 
 /* shell parsing */
-#define STS_TOK_BUFFSIZE         64
-#define STS_RL_BUFFSIZE          1024
-#define STS_TOK_DELIM            " \t\r\n\a"
+#define STS_TOK_BUFFSIZE          64
+#define STS_RL_BUFFSIZE           1024
+#define STS_TOK_DELIM             " \t\r\n\a"
 
 /* sec */
-#define BYTE                     8
-#define AES_ECB_BLOCKSIZE        16
-#define STS_MSG_MAXLEN           256 /* must be identical to slave client */
-#define ECDH_SHARED_KEYSIZE_BITS 256
+#define BYTE                      8
+#define AES_ECB_BLOCKSIZE         16
+#define STS_MSG_MAXLEN            256 /* must be identical to slave client */
+#define ECDH_SHARED_KEYSIZE_BITS  256
 #define ECDH_SHARED_KEYSIZE_BYTES ECDH_SHARED_KEYSIZE_BITS / BYTE
 
 enum sts_return_value {
@@ -47,11 +47,6 @@ enum sts_return_value {
 enum sts_clients {
         STS_MASTER   = 0,
         STS_SLAVE    = 1,
-};
-
-/* types of message that can be sent between the two clients */
-enum sts_msg_type {
-        STS_CMD = 'C', /* user keyboard input command */
 };
 
 enum sts_status {
@@ -89,6 +84,6 @@ int sts_help(char **argv);
 int sts_exit(char **argv);
 int sts_start_session(char **argv);
 int sts_stop_session(char **argv);
-int sts_send_cmd(char **argv);
+int sts_send(char **argv);
 int sts_status(char **argv);
 int sts_ecdh_aes_test(char **argv);

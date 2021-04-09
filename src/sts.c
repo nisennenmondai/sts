@@ -24,7 +24,7 @@ static unsigned int thrd_msg_type = 0;
 static pthread_t _mqttyield_thrd_pid;
 
 static char *sts_msg_inc = NULL;
-static char *sts_cmd_out = NULL;
+static char *sts_msg_out = NULL;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -58,7 +58,7 @@ int (*builtin_func[]) (char **argv) = {
         &sts_exit,
         &sts_start_session,
         &sts_stop_session,
-        &sts_send_cmd,
+        &sts_send,
         &sts_status,
         &sts_ecdh_aes_test,
 };
@@ -129,35 +129,33 @@ static void *_mqttyield(void *argv)
         return NULL;
 }
 
-static void _prep_sts_msg(MessageData *data)
+static void _prep_msg_inc(MessageData *data)
 {
         sts_msg_inc = calloc((size_t)data->message->payloadlen + 1, sizeof(char));
         memcpy(sts_msg_inc, data->message->payload, data->message->payloadlen);
 }
 
-static void sts_prep_cmd(char *cmd)
+static void _prep_msg_out(char *message)
 {
         int i;
-        int len = strlen(cmd);
+        int len = strlen(message);
         char msg[len + 1];
         memset(msg, 0, sizeof(msg));
         for (i = 0; i < len + 1; i++) {
-                msg[i] = cmd[i];
+                msg[i] = message[i];
                 if (msg[i] == '|') {
                         msg[i] = ' ';
                 }
         }
 
-        sts_cmd_out = calloc(0, sizeof(len + 1));
-        /* add tag */
-        sts_cmd_out[0] = (char)STS_CMD;
-        _concatenate(sts_cmd_out, msg);
+        sts_msg_out = calloc(0, sizeof(len + 1));
+        strcpy(sts_msg_out, msg);
 }
 
 static void _on_msg_recv(MessageData *data)
 {
-        _prep_sts_msg(data);
-        printf("> %s\n", sts_msg_inc);
+        _prep_msg_inc(data);
+        printf("[INC]: %s\n", sts_msg_inc);
         ctx.msg_recv++;
         free(sts_msg_inc);
 }
@@ -363,11 +361,6 @@ int sts_stop_session(char **argv)
 {
         (void)argv;
         int ret;
-        char *string[] = {
-                "send",
-                "sts|stop",
-        };
-        sts_send_cmd(string);
         if (ctx.sts_status == STS_STOPPED) {
                 printf("sts: error! no sts session currently active\n");
                 return STS_PROMPT;
@@ -386,7 +379,7 @@ int sts_stop_session(char **argv)
         return STS_PROMPT;
 }
 
-int sts_send_cmd(char **string)
+int sts_send(char **string)
 {
         int ret = 0;
         if (ctx.sts_status == STS_STOPPED) {
@@ -399,24 +392,24 @@ int sts_send_cmd(char **string)
                 return STS_PROMPT;
         }
 
-        sts_prep_cmd(string[1]);
+        _prep_msg_out(string[1]);
 
         MQTTMessage msg;
         msg.qos = ctx.qos;
-        msg.payload = (void*)sts_cmd_out;
-        msg.payloadlen = strlen(sts_cmd_out);
+        msg.payload = (void*)sts_msg_out;
+        msg.payloadlen = strlen(sts_msg_out);
         msg.retained = ctx.is_retained;
-
-        /* echo */
-        printf("%s\n", sts_cmd_out);
 
         ret = MQTTPublish(&ctx.client, ctx.topic_pub, &msg);
         if (ret < 0) {
-                free(sts_cmd_out);
+                free(sts_msg_out);
                 _disconnect();
                 return STS_PROMPT;
         }
-        free(sts_cmd_out);
+
+        /* echo */
+        printf("> [OUT]: %s\n", sts_msg_out);
+        free(sts_msg_out);
         ctx.msg_sent++;
         return STS_PROMPT;
 }
@@ -462,7 +455,7 @@ int sts_status(char **argv)
         printf("sts: qos:             %u\n", ctx.qos);
         printf("sts: keep_alive:      %u\n", ctx.keep_alive);
         printf("sts: clean_session:   %u\n", ctx.clean_session);
-        //printf("sts: is_retained      %u\n", MQTT_IS_RETAINED);
+        printf("sts: is_retained      %u\n", ctx.is_retained);
         printf("sts: publish_topic:   %s\n", ctx.topic_pub);
         printf("sts: subscribe_topic: %s\n", ctx.topic_sub);
         printf("sts: msg sent:        %u\n", ctx.msg_sent);
