@@ -1,0 +1,14 @@
+ip   = 66.66.66.66
+port = 1883
+qos  = 0
+username = username
+password = password
+subtop   = m2s
+pubtop   = s2m
+mqtt_version  = 4
+clientid      = clientid
+clean_session = 1
+keep_alive    = 0
+is_retained   = 0
+sts_mode      = slave
+sts_id        = t3mpl4t3_slave

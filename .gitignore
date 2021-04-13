@@ -1,5 +1,5 @@
 bin/
 obj/
 tags
-sts
-config
+config_master
+config_slave

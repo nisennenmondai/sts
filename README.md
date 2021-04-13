@@ -2,11 +2,17 @@
 MQTT client with end to end encryption for embedded Linux
 -------
 #### Regarding config file
-Check "template_config", this is noob level parsing, do not remove space before and after '='
+Check "template_config_", this is noob level parsing, do not remove space before and after '='
 - [key] = [value] ---> ip = 66.66.66.66
-- [value] max size in char: 64
+- max char for [value] = 128
+- sts_mode = nosec || master || slave
+- qos = 0 || 1 || 2
+- clean_session = 0 || 1
+- keep_alive    = 0 || 1
+- is_retained   = 0 || 1
 
 #### How to use
+- ./buils.sh (sudo make install install lib.so files)
 - cd bin/
 - ./sts
 - start ../path_to_your_config_file
@@ -16,4 +22,3 @@ Check "template_config", this is noob level parsing, do not remove space before 
   having a key exchange protocole using ECDH
 - I want to have digital signature using ECDSA
 - I want to support a better AES algorithm than ECB
-

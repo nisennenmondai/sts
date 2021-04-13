@@ -12,7 +12,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 static struct sts_context ctx = {
         .status     = STS_STOPPED,
-        .encryption = 0, /* default */
         .msg_sent       = 0,
         .msg_recv       = 0,
 };
@@ -47,7 +46,7 @@ char *builtin_cmd_desc[] = {
         "stop              stop STS session                           |",
         "send [MSG]        send a message to the broker               |",
         "                  example: 'send blah1 blah2 blah3'          |\n| "
-        "status            display status of current session          |",
+                "status            display status of current session          |",
         "sectest [MSG]     ecdh aes enc/dec test (no space)           |",
 };
 
@@ -181,12 +180,23 @@ static int _load_config(const char *config)
                         ctx.keep_alive = atoi(value);
                 } else if (strcmp(key, "is_retained") == 0) {
                         ctx.is_retained = atoi(value);
-                } else if (strcmp(key, "encryption") == 0) {
-                        ctx.encryption = atoi(value);
+                } else if (strcmp(key, "sts_mode") == 0) {
+                        if (strcmp(value, "nosec") == 0) {
+                                strcpy(ctx.sts_mode, value);
+                        } else if (strcmp(value, "master") == 0) {
+                                strcpy(ctx.sts_mode, value);
+                        } else if (strcmp(value, "slave") == 0) {
+                                strcpy(ctx.sts_mode, value);
+                        } else {
+                                printf("sts: error! wrong value for sts_mode set to nosec by default\n");
+                                strcpy(ctx.sts_mode, "nosec");
+                        }
+                } else if (strcmp(key, "sts_id") == 0) {
+                        strcpy(ctx.sts_id, value);
                 } else {
                         printf("sts: error! wrong key in config file, please "
                                         "see 'template_config'\n");
-                        return -1;
+                        return STS_PROMPT;
                 }
         }
         fclose(fp);
@@ -222,6 +232,8 @@ static int _init_sec(void)
                 return -1;
         }
         printf("sts: ecdh keypair generated\n");
+         /* TODO establish authentification protocole between master slave using
+          * sts_id */
         return 0;
 }
 
@@ -336,7 +348,7 @@ int sts_start_session(char **argv)
                 return STS_PROMPT;
         }
 
-        if (ctx.encryption == 1) {
+        if (strcmp(ctx.sts_mode, "master") == 0 || strcmp(ctx.sts_mode, "slave") == 0) {
                 ret = _init_sec();
                 if (ret < 0) {
                         printf("sts: error! while initialization of security\n");
@@ -440,6 +452,8 @@ int sts_status(char **argv)
         }
 
         printf("sts: status:          ONLINE\n");
+        printf("sts: sts_id:          %s\n", ctx.sts_id);
+        printf("sts: sts_mode:        %s\n", ctx.sts_mode);
         printf("sts: mqtt version:    %u\n", ctx.mqtt_version);
         printf("sts: broker_ip:       %s\n", ctx.ip);
         printf("sts: broker_port:     %u\n", ctx.port);
@@ -454,7 +468,6 @@ int sts_status(char **argv)
         printf("sts: subscribe_topic: %s\n", ctx.topic_sub);
         printf("sts: msg sent:        %u\n", ctx.msg_sent);
         printf("sts: msg received:    %u\n", ctx.msg_recv);
-        printf("sts: encryption:      %u\n", ctx.encryption);
 
         return STS_PROMPT;
 }
@@ -470,7 +483,7 @@ static void sts_welcome(void)
         printf("|                                                              |\n");
         printf("| 'help' to display command list                               |\n");
         printf("|                                                              |\n");
-        printf("| nisennenmondai@protonmail.com                                |\n");
+        printf("| https://github.com/nisennenmondai                            |\n");
         printf("|                                                              |\n");
         printf("+--------------------------------------------------------------+\n");
 }

@@ -29,7 +29,7 @@
 #define READBUFFSIZE              1024
 #define SENDBUFFSIZE              1024
 #define COMMAND_TIMEOUT_MS        10000
-#define CONFIG_VALUE_MAXLENGTH    64
+#define CONFIG_VALUE_MAXLENGTH    128
 
 /* shell */
 #define STS_TOK_BUFFSIZE          64
@@ -43,16 +43,18 @@
 #define ECDH_SHARED_KEYSIZE_BITS  256
 #define ECDH_SHARED_KEYSIZE_BYTES ECDH_SHARED_KEYSIZE_BITS / BYTE
 
-/* client */
+/* return code */
 #define STS_EXIT    0
 #define STS_PROMPT  1
-#define STS_HOST    0
-#define STS_REMOTE  1
+
+/* status */
 #define STS_STARTED 0
 #define STS_STOPPED 1
-#define STS_UNENCRYPTED 0
-#define STS_ENCRYPTED   1
 #define STS_KILL_THREAD 1
+
+/* sec test */
+#define STS_HOST    0
+#define STS_REMOTE  1
 
 struct sts_context {
         unsigned int mqtt_version;
@@ -64,13 +66,14 @@ struct sts_context {
         unsigned int msg_sent;
         unsigned int msg_recv;
         unsigned short status;
-        unsigned short encryption;
         char topic_sub[CONFIG_VALUE_MAXLENGTH];
         char topic_pub[CONFIG_VALUE_MAXLENGTH];
         char clientid[CONFIG_VALUE_MAXLENGTH];
         char username[CONFIG_VALUE_MAXLENGTH];
         char password[CONFIG_VALUE_MAXLENGTH];
         char ip[16];
+        char sts_id[CONFIG_VALUE_MAXLENGTH];
+        char sts_mode[CONFIG_VALUE_MAXLENGTH];
         Network network;
         MQTTClient client;
         mbedtls_ecdh_context host_ecdh_ctx;
