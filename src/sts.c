@@ -12,8 +12,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 static struct sts_context ctx = {
         .status     = STS_STOPPED,
-        .msg_sent       = 0,
-        .msg_recv       = 0,
+        .msg_sent     = 0,
+        .msg_recv     = 0,
+        .master_flag  = 0,
+        .slave_flag   = 0,
 };
 
 static unsigned char sendbuff[SENDBUFFSIZE];
@@ -22,9 +24,11 @@ static unsigned char readbuff[READBUFFSIZE];
 static unsigned int thrd_msg_type = 0;
 static pthread_t _mqttyield_thrd_pid;
 
+/* TODO think about more appropriate naming with those var */
 static char *sts_msg_inc = NULL;
 static char *sts_msg_out = NULL;
-
+static char sts_msg_header[10]; /* max header length */
+static char sts_msg_data[STS_MSG_MAXLEN];
 
 ////////////////////////////////////////////////////////////////////////////////
 /* STS COMMANDS LISTS */
@@ -34,8 +38,8 @@ char *builtin_cmd[] = {
         "exit",
         "start",
         "stop",
-        "send",
         "status",
+        "sendtest",
         "sectest",
 };
 
@@ -44,9 +48,9 @@ char *builtin_cmd_desc[] = {
         "exit              exit shell                                 |",
         "start [CONFIG]    start STS session                          |",
         "stop              stop STS session                           |",
-        "send [MSG]        send a message to the broker               |",
         "                  example: 'send blah1 blah2 blah3'          |\n| "
                 "status            display status of current session          |",
+        "sendtest [MSG]    send a message to the broker               |",
         "sectest [MSG]     ecdh aes enc/dec test (no space)           |",
 };
 
@@ -55,8 +59,8 @@ int (*builtin_func[]) (char **argv) = {
         &sts_exit,
         &sts_start_session,
         &sts_stop_session,
-        &sts_send,
         &sts_status,
+        &sts_send_test,
         &sts_ecdh_aes_test,
 };
 
@@ -65,7 +69,7 @@ int sts_num_builtins(void) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-/* STS COMMANDS */
+/* STS CLIENT */
 ////////////////////////////////////////////////////////////////////////////////
 
 static void _concatenate(char p[], char q[]) {
@@ -111,6 +115,8 @@ static void _prep_msg_inc(MessageData *data)
         memcpy(sts_msg_inc, data->message->payload, data->message->payloadlen);
 }
 
+/* TODO think about a better name for this function as it seems to be only for
+ * sendtest() */
 static void _prep_msg_out(char **message)
 {
         int i = 1;
@@ -133,12 +139,61 @@ static void _prep_msg_out(char **message)
         }
 }
 
+static int _encryption_handlers(char *msg)
+{
+        size_t i;
+        int index = 0;
+
+        memset(sts_msg_header, 0, sizeof(sts_msg_header));
+        memset(sts_msg_data, 0, sizeof(sts_msg_data));
+
+        /* extract header */
+        for (i = 0; i < sizeof(sts_msg_header); i++) {
+                sts_msg_header[i] = msg[i];
+                if (sts_msg_header[i] == ':') {
+                        index = i + 1;
+                        break;
+                }
+        }
+
+        /* extract data */
+        for (i = 0; i < STS_MSG_MAXLEN; i++) {
+                if (msg[index + i] != '\0') {
+                        sts_msg_data[i] = msg[index + i];
+                } 
+                if (msg[index + i] == '\0') {
+                        break;
+                }
+        }
+
+        /* slave side, AUTHREQ handler */
+        if (strcmp(sts_msg_header, STS_AUTHREQ) == 0) {
+                ctx.slave_flag = 1;
+                ctx.msg_recv++;
+                free(sts_msg_inc);
+                return 0;
+        }
+        /* TODO master side, handle AUTHACK */
+        /* TODO slave side, handle RDYREQ */
+        /* TODO master side, handle RDYACK */
+        return -1;
+}
+
 static void _on_msg_recv(MessageData *data)
 {
+        int ret = -1;
         _prep_msg_inc(data);
-        printf("[INC]: %s\n", sts_msg_inc);
-        ctx.msg_recv++;
-        free(sts_msg_inc);
+
+        /* handlers if encryption ON */
+        if (strcmp(ctx.sts_mode, "master") == 0 || strcmp(ctx.sts_mode, "slave") == 0) {
+                ret = _encryption_handlers(sts_msg_inc);
+        }
+
+        if (ret < 0) {
+                printf("[INC]: %s\n", sts_msg_inc);
+                ctx.msg_recv++;
+                free(sts_msg_inc);
+        }
 }
 
 static int _load_config(const char *config)
@@ -152,10 +207,10 @@ static int _load_config(const char *config)
         }
 
         char key[16] = {0};
-        char comp[2] = {0};
+        char cmp[2] = {0};
         char value[CONFIG_VALUE_MAXLENGTH] = {0};
 
-        while (fscanf(fp, "%s %s %s ", key, comp, value) != EOF) {
+        while (fscanf(fp, "%s %s %s ", key, cmp, value) != EOF) {
                 if (strcmp(key, "ip") == 0) {
                         strcpy(ctx.ip, value);
                 } else if (strcmp(key, "port") == 0) {
@@ -188,11 +243,14 @@ static int _load_config(const char *config)
                         } else if (strcmp(value, "slave") == 0) {
                                 strcpy(ctx.sts_mode, value);
                         } else {
-                                printf("sts: error! wrong value for sts_mode set to nosec by default\n");
+                                printf("sts: error! wrong value for sts_mode "
+                                                "set to nosec by default\n");
                                 strcpy(ctx.sts_mode, "nosec");
                         }
-                } else if (strcmp(key, "sts_id") == 0) {
-                        strcpy(ctx.sts_id, value);
+                } else if (strcmp(key, "id_master") == 0) {
+                        strcpy(ctx.id_master, value);
+                } else if (strcmp(key, "id_slave") == 0) {
+                        strcpy(ctx.id_slave, value);
                 } else {
                         printf("sts: error! wrong key in config file, please "
                                         "see 'template_config'\n");
@@ -215,25 +273,6 @@ static int _init(const char *config)
         MQTTClientInit(&ctx.client, &ctx.network, COMMAND_TIMEOUT_MS,
                         sendbuff, SENDBUFFSIZE, readbuff, READBUFFSIZE);
         printf("sts: network and client initialized\n");
-        return 0;
-}
-
-static int _init_sec(void)
-{
-        int ret;
-        mbedtls_ecdh_init(&ctx.host_ecdh_ctx);
-        ret = mbedtls_ecdh_setup(&ctx.host_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
-        if (ret < 0) {
-                return -1;
-        }
-        ret = mbedtls_ecdh_gen_public(&ctx.host_ecdh_ctx.grp, &ctx.host_ecdh_ctx.d, 
-                        &ctx.host_ecdh_ctx.Q, genrand, NULL);
-        if (ret < 0) {
-                return -1;
-        }
-        printf("sts: ecdh keypair generated\n");
-         /* TODO establish authentification protocole between master slave using
-          * sts_id */
         return 0;
 }
 
@@ -266,6 +305,25 @@ static int _connect(void)
         return 0;
 }
 
+static void _disconnect(void)
+{
+        int ret = 0;
+
+        ret = MQTTDisconnect(&ctx.client);
+        if (ret < 0) {
+                printf("sts: error! couldn't disconnect client\n");
+                printf("sts: forcing network disconnection\n");
+                NetworkDisconnect(&ctx.network);
+                printf("sts: disconnected from broker\n");
+                return;
+        }
+        NetworkDisconnect(&ctx.network);
+        ctx.status = STS_STOPPED;
+        ctx.msg_sent = 0;
+        ctx.msg_recv = 0;
+        printf("sts: disconnected from broker\n");
+}
+
 static int _subscribe(void)
 {
         int ret = 0;
@@ -290,23 +348,95 @@ static int _unsubscribe(void)
         return 0;
 }
 
-static void _disconnect(void)
+static int _publish(char *message)
 {
         int ret = 0;
+        MQTTMessage msg;
+        msg.qos = ctx.qos;
+        msg.payload = (void*)message;
+        msg.payloadlen = strlen(message);
+        msg.retained = ctx.is_retained;
 
-        ret = MQTTDisconnect(&ctx.client);
+        ret = MQTTPublish(&ctx.client, ctx.topic_pub, &msg);
         if (ret < 0) {
-                printf("sts: error! couldn't disconnect client\n");
-                printf("sts: forcing network disconnection\n");
-                NetworkDisconnect(&ctx.network);
-                printf("sts: disconnected from broker\n");
-                return;
+                free(message);
+                _disconnect();
+                return -1;
         }
-        NetworkDisconnect(&ctx.network);
-        ctx.status = STS_STOPPED;
-        ctx.msg_sent = 0;
-        ctx.msg_recv = 0;
-        printf("sts: disconnected from broker\n");
+
+        /* echo */
+        printf("> [OUT]: %s\n", message);
+        free(message);
+        ctx.msg_sent++;
+        return 0;
+}
+
+static int _init_sec(void)
+{
+        int ret = 0;
+        int count = 0;
+        mbedtls_ecdh_init(&ctx.host_ecdh_ctx);
+        ret = mbedtls_ecdh_setup(&ctx.host_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
+        if (ret < 0) {
+                return -1;
+        }
+        ret = mbedtls_ecdh_gen_public(&ctx.host_ecdh_ctx.grp, &ctx.host_ecdh_ctx.d, 
+                        &ctx.host_ecdh_ctx.Q, genrand, NULL);
+        if (ret < 0) {
+                return -1;
+        }
+        printf("sts: ecdh keypair generated\n");
+
+        /* master side */
+        if (strcmp(ctx.sts_mode, "master") == 0) {
+                /* send authreq to slave 5 times every 5 sec */
+                while (ctx.master_flag != 1 && count < 5) {
+                        sts_msg_out = malloc(sizeof(STS_MSG_MAXLEN));
+                        memset(sts_msg_out, 0, sizeof(STS_MSG_MAXLEN));
+                        _concatenate(sts_msg_out, STS_AUTHREQ);
+                        _concatenate(sts_msg_out, ctx.id_slave);
+                        ret = _publish(sts_msg_out);
+                        if (ret < 0) {
+                                free(sts_msg_out);
+                                printf("sts: error! auth failed\n");
+                                return -1;
+                        }
+                        count++;
+                        sleep(5);
+                }
+                if (count == 5) {
+                        count = 0;
+                        printf("sts: error! auth failed after 5 attempts\n");
+                        return -1;
+                }
+                count = 0;
+        }
+
+        /* slave side */
+        if (strcmp(ctx.sts_mode, "slave") == 0) {
+                /* receive authreq from master */
+                while (1) {
+                        if (ctx.slave_flag == 1) {
+                                printf("sts: Authentification request received from master\n");
+                                printf("sts: Verifying ID...\n");
+                                if (strcmp(sts_msg_data, ctx.id_slave) == 0) {
+                                        printf("sts: Verification OK!\n");
+                                        ctx.slave_flag = 0;
+                                        memset(sts_msg_data, 0, sizeof(sts_msg_data));
+                                        break;
+
+                                } else {
+                                        printf("sts: Verification FAILURE! wrong ID\n");
+                                        ctx.slave_flag = 0;
+                                        memset(sts_msg_data, 0, sizeof(sts_msg_data));
+                                        continue;
+                                }
+                        }
+                }
+
+                /* TODO send AUTHACK + pubkey */
+        }
+        return 0;
 }
 
 static void _free_sec(void)
@@ -384,7 +514,7 @@ int sts_stop_session(char **argv)
         return STS_PROMPT;
 }
 
-int sts_send(char **message)
+int sts_send_test(char **message)
 {
         int ret = 0;
 
@@ -452,7 +582,8 @@ int sts_status(char **argv)
         }
 
         printf("sts: status:          ONLINE\n");
-        printf("sts: sts_id:          %s\n", ctx.sts_id);
+        printf("sts: id_master:       %s\n", ctx.id_master);
+        printf("sts: id_slave:        %s\n", ctx.id_slave);
         printf("sts: sts_mode:        %s\n", ctx.sts_mode);
         printf("sts: mqtt version:    %u\n", ctx.mqtt_version);
         printf("sts: broker_ip:       %s\n", ctx.ip);

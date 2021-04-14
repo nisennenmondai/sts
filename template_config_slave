@@ -11,4 +11,5 @@ clean_session = 1
 keep_alive    = 0
 is_retained   = 0
 sts_mode      = slave
-sts_id        = t3mpl4t3_slave
+id_master     = 123
+id_slave      = 321

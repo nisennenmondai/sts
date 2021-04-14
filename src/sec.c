@@ -228,7 +228,7 @@ int sts_ecdh_aes_test(char **argv)
                 message[i] = msg[i];
                 printf("%c", message[i]);
         }
-        printf("\nsts: message size: %d\n\n", msg_size);
+        printf("\nsts: message size: %d bytes\n\n", msg_size);
 
         /* set encryption key for host and decryption key for remote */
         mbedtls_aes_setkey_enc(&host_aes_ctx, host_derived_key, 

@@ -39,7 +39,7 @@
 /* sec */
 #define BYTE                      8
 #define AES_ECB_BLOCKSIZE         16
-#define STS_MSG_MAXLEN            256
+#define STS_MSG_MAXLEN            1024
 #define ECDH_SHARED_KEYSIZE_BITS  256
 #define ECDH_SHARED_KEYSIZE_BYTES ECDH_SHARED_KEYSIZE_BITS / BYTE
 
@@ -56,6 +56,12 @@
 #define STS_HOST    0
 #define STS_REMOTE  1
 
+/* sts message types */
+#define STS_AUTHREQ "AUTHREQ:"
+#define STS_AUTHACK "AUTHACK:"
+#define STS_RDYREQ  "RDYREQ:"
+#define STS_RDYACK  "RDYACK:"
+
 struct sts_context {
         unsigned int mqtt_version;
         unsigned int qos;
@@ -66,14 +72,17 @@ struct sts_context {
         unsigned int msg_sent;
         unsigned int msg_recv;
         unsigned short status;
+        unsigned short master_flag;
+        unsigned short slave_flag;
         char topic_sub[CONFIG_VALUE_MAXLENGTH];
         char topic_pub[CONFIG_VALUE_MAXLENGTH];
         char clientid[CONFIG_VALUE_MAXLENGTH];
         char username[CONFIG_VALUE_MAXLENGTH];
         char password[CONFIG_VALUE_MAXLENGTH];
-        char ip[16];
-        char sts_id[CONFIG_VALUE_MAXLENGTH];
+        char id_master[CONFIG_VALUE_MAXLENGTH];
+        char id_slave[CONFIG_VALUE_MAXLENGTH];
         char sts_mode[CONFIG_VALUE_MAXLENGTH];
+        char ip[16];
         Network network;
         MQTTClient client;
         mbedtls_ecdh_context host_ecdh_ctx;
@@ -84,7 +93,7 @@ int sts_help(char **argv);
 int sts_exit(char **argv);
 int sts_start_session(char **argv);
 int sts_stop_session(char **argv);
-int sts_send(char **argv);
+int sts_send_test(char **argv);
 int sts_status(char **argv);
 int sts_ecdh_aes_test(char **argv);
 int genrand(void *rng_state, unsigned char *output, size_t len);
