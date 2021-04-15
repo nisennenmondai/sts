@@ -139,11 +139,32 @@ static void _prep_msg_out(char **message)
         }
 }
 
+/* TODO temporary for debug */
+static void _print_derived_key(const unsigned char *buf, size_t size, int client) 
+{
+        size_t i;
+        if (client == 0) {
+                printf("sts: host derived shared_key:   ");
+        }
+
+        if (client == 1) {
+                printf("\nsts: remote derived shared_key: ");
+        }
+
+        for (i = 0 ; i < size; i++) {
+                if (buf[i] == '\0') {
+                        break;
+                }
+                printf("%02X", buf[i]);
+        }
+}
+
 static int _encryption_handlers(char *msg)
 {
         size_t i;
         int index = 0;
 
+        /* TODO header and data should stay local to this function */
         memset(sts_msg_header, 0, sizeof(sts_msg_header));
         memset(sts_msg_data, 0, sizeof(sts_msg_data));
 
@@ -173,7 +194,63 @@ static int _encryption_handlers(char *msg)
                 free(sts_msg_inc);
                 return 0;
         }
-        /* TODO master side, handle AUTHACK */
+        /* TODO master side, AUTHACK handler */
+        if (strcmp(sts_msg_header, STS_AUTHACK) == 0) {
+                int index_X = 0;
+                int index_Y = 0;
+                char slave_QX[21];
+                char slave_QY[21];
+                memset(slave_QX, 0, sizeof(slave_QX));
+                memset(slave_QY, 0, sizeof(slave_QY));
+                /* extract slave public key X */
+                for (i = 0; i < STS_MSG_MAXLEN; i++) {
+                        if (sts_msg_data[i] == 'Y') {
+                                index_X = index_X - 1;
+                                break;
+                        }
+                        index_X++;
+                }
+                memcpy(slave_QX, &sts_msg_data[1], index_X * sizeof(char));
+
+                /* extract slave public key Y */
+                for (i = index_X + 2; i < STS_MSG_MAXLEN; i++) {
+                        if (sts_msg_data[i] == '\0') {
+                                index_Y = index_Y + 1;
+                                break;
+                        }
+                        index_Y++;
+                }
+                memcpy(slave_QY, &sts_msg_data[index_X + 2], index_Y * sizeof(char));
+
+                /* copy public key */
+                size_t olen;
+                unsigned char host_derived_key[ECDH_SHARED_KEYSIZE_BYTES];
+                mbedtls_ecp_point Q;
+                mbedtls_ecp_point_init(&Q);
+
+                /* problem */
+                mbedtls_mpi_read_string(&Q.X, 10, slave_QX);
+                mbedtls_mpi_read_string(&Q.Y, 10, slave_QY);
+                mbedtls_mpi_lset(&Q.Z, 1);
+                printf("read_string Q X: %lu\n", *Q.X.p);
+                printf("read_string Q Y: %lu\n", *Q.Y.p);
+
+                mbedtls_ecp_copy(&ctx.host_ecdh_ctx.Qp, &Q);
+                printf("ecp_copy X: %lu\n", *ctx.host_ecdh_ctx.Qp.X.p);
+                printf("ecp_copy Y: %lu\n", *ctx.host_ecdh_ctx.Qp.Y.p);
+                mbedtls_ecdh_calc_secret(&ctx.host_ecdh_ctx, &olen, host_derived_key, 
+                                sizeof(host_derived_key), genrand, NULL);
+                
+                _print_derived_key(host_derived_key, sizeof(host_derived_key), 0);
+                mbedtls_ecp_point_free(&Q);
+
+                ctx.master_flag = 1;
+                ctx.msg_recv++;
+                free(sts_msg_inc);
+                return 0;
+        }
+
+
         /* TODO slave side, handle RDYREQ */
         /* TODO master side, handle RDYACK */
         return -1;
@@ -375,6 +452,8 @@ static int _init_sec(void)
 {
         int ret = 0;
         int count = 0;
+        char slave_QX[20];
+        char slave_QY[20];
         mbedtls_ecdh_init(&ctx.host_ecdh_ctx);
         ret = mbedtls_ecdh_setup(&ctx.host_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
         if (ret < 0) {
@@ -385,11 +464,13 @@ static int _init_sec(void)
         if (ret < 0) {
                 return -1;
         }
+
         printf("sts: ecdh keypair generated\n");
 
-        /* master side */
+        /* MASTER SIDE */
         if (strcmp(ctx.sts_mode, "master") == 0) {
-                /* send authreq to slave 5 times every 5 sec */
+
+                /* send AUTHREQ to slave 5 times every 5 sec */
                 while (ctx.master_flag != 1 && count < 5) {
                         sts_msg_out = malloc(sizeof(STS_MSG_MAXLEN));
                         memset(sts_msg_out, 0, sizeof(STS_MSG_MAXLEN));
@@ -403,18 +484,21 @@ static int _init_sec(void)
                         }
                         count++;
                         sleep(5);
+                        if (count == 5) {
+                                count = 0;
+                                printf("sts: error! auth failed after 5 attempts\n");
+                                return -1;
+                        }
                 }
-                if (count == 5) {
-                        count = 0;
-                        printf("sts: error! auth failed after 5 attempts\n");
-                        return -1;
-                }
-                count = 0;
+
+                /* receive AUTHACK from slave */
+                printf("sts: Received AUTHACK + Public Key from Slave\n");
+                ctx.master_flag = 0;
         }
 
-        /* slave side */
+        /* SLAVE SIDE */
         if (strcmp(ctx.sts_mode, "slave") == 0) {
-                /* receive authreq from master */
+                /* receive AUTHREQ from master */
                 while (1) {
                         if (ctx.slave_flag == 1) {
                                 printf("sts: Authentification request received from master\n");
@@ -434,7 +518,24 @@ static int _init_sec(void)
                         }
                 }
 
-                /* TODO send AUTHACK + pubkey */
+                /* send AUTHACK + pubkey to master */
+                printf("sts: Sending AUTHACK + Public Key...\n");
+                sts_msg_out = malloc(sizeof(STS_MSG_MAXLEN));
+                memset(sts_msg_out, 0, sizeof(STS_MSG_MAXLEN));
+                sprintf(slave_QX, "%lu" , (uint64_t)*ctx.host_ecdh_ctx.Q.X.p);
+                sprintf(slave_QY, "%lu" , (uint64_t)*ctx.host_ecdh_ctx.Q.Y.p);
+                _concatenate(sts_msg_out, STS_AUTHACK);
+                _concatenate(sts_msg_out, "X");
+                _concatenate(sts_msg_out, slave_QX);
+                _concatenate(sts_msg_out, "Y");
+                _concatenate(sts_msg_out, slave_QY);
+
+                ret = _publish(sts_msg_out);
+                if (ret < 0) {
+                        free(sts_msg_out);
+                        printf("sts: error! Sending AUTHACK failed\n");
+                        return -1;
+                }
         }
         return 0;
 }

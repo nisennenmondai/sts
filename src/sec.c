@@ -20,6 +20,9 @@ int genrand(void *rng_state, unsigned char *output, size_t len)
                         use_len = sizeof(int);
 
                 srand(time(NULL));
+                /* usleep is only for test, or else same keypair will be 
+                 * generated for both host and remote */
+                usleep(25000); 
                 rnd = rand()%100;
                 memcpy(output, &rnd, use_len);
                 output += use_len;
