@@ -41,6 +41,7 @@
 #define AES_ECB_BLOCKSIZE         16
 #define STS_MSG_MAXLEN            1024
 #define ECDH_SHARED_KEYSIZE_BITS  256
+#define MPI_STRING_SIZE           128
 #define ECDH_SHARED_KEYSIZE_BYTES ECDH_SHARED_KEYSIZE_BITS / BYTE
 
 /* return code */
@@ -74,6 +75,7 @@ struct sts_context {
         unsigned short status;
         unsigned short master_flag;
         unsigned short slave_flag;
+        unsigned char derived_key[ECDH_SHARED_KEYSIZE_BYTES];
         char topic_sub[CONFIG_VALUE_MAXLENGTH];
         char topic_pub[CONFIG_VALUE_MAXLENGTH];
         char clientid[CONFIG_VALUE_MAXLENGTH];
