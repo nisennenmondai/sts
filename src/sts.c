@@ -10,13 +10,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 /* VARIABLES */
 ////////////////////////////////////////////////////////////////////////////////
-static struct sts_context ctx = {
-        .status     = STS_STOPPED,
-        .msg_sent     = 0,
-        .msg_recv     = 0,
-        .master_flag  = 0,
-        .slave_flag   = 0,
-};
+static struct sts_context ctx;
 
 static unsigned char sendbuff[SENDBUFFSIZE];
 static unsigned char readbuff[READBUFFSIZE];
@@ -27,7 +21,7 @@ static pthread_t _mqttyield_thrd_pid;
 /* TODO think about more appropriate naming with those var */
 static char *sts_msg_inc = NULL;
 static char *sts_msg_out = NULL;
-static char sts_msg_header[10]; /* max header length */
+static char sts_msg_header[STS_HEADERSIZE]; /* max header length */
 static char sts_msg_data[STS_MSG_MAXLEN];
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -139,31 +133,14 @@ static void _prep_msg_out(char **message)
         }
 }
 
-/* TODO temporary for debug */
-static void _print_derived_key(const unsigned char *buf, size_t size, int client) 
-{
-        size_t i;
-        if (client == 0) {
-                printf("sts: host derived shared_key:   ");
-        }
-
-        if (client == 1) {
-                printf("\nsts: remote derived shared_key: ");
-        }
-
-        for (i = 0 ; i < size; i++) {
-                if (buf[i] == '\0') {
-                        break;
-                }
-                printf("%02X", buf[i]);
-        }
-}
-
-static int _encryption_handlers(char *msg)
+/* TODO VERIFY EVERY STEP WITH ERROR HANDLING */
+/* TODO REFACTOR */
+static int _sts_message_handlers(char *msg)
 {
         size_t i;
         size_t olen;
         int index = 0;
+        ctx.msg_recv++;
 
         /* TODO header and data should stay local to this function */
         memset(sts_msg_header, 0, sizeof(sts_msg_header));
@@ -188,15 +165,14 @@ static int _encryption_handlers(char *msg)
                 }
         }
 
-        /* slave side, AUTHREQ handler */
+        /* slave side, receive AUTHREQ */
         if (strcmp(sts_msg_header, STS_AUTHREQ) == 0) {
-                ctx.slave_flag = 1;
-                ctx.msg_recv++;
+                ctx.slave_flag = STS_STEP_1;
                 free(sts_msg_inc);
                 return 0;
         }
 
-        /* master side, AUTHACK handler */
+        /* master side, receive AUTHACK */
         /* TODO master should handle wrong id feedback with disconnection */
         if (strcmp(sts_msg_header, STS_AUTHACK) == 0) {
                 printf("sts: Authentification SUCCESS!\n");
@@ -227,8 +203,6 @@ static int _encryption_handlers(char *msg)
                 }
                 memcpy(slave_QY, &sts_msg_data[index_X + 2], index_Y * sizeof(char));
 
-
-
                 /* copy X Y */
                 mbedtls_ecp_point_read_string(&ctx.host_ecdh_ctx.Qp, 16, slave_QX, slave_QY);
 
@@ -237,18 +211,59 @@ static int _encryption_handlers(char *msg)
                 mbedtls_ecdh_calc_secret(&ctx.host_ecdh_ctx, &olen, ctx.derived_key, 
                                 sizeof(ctx.derived_key), genrand, NULL);
 
-                /* TODO debug only */
-                _print_derived_key(ctx.derived_key, sizeof(ctx.derived_key), 0);
-                printf("\n");
-
-                ctx.master_flag = 1;
-                ctx.msg_recv++;
+                ctx.master_flag = STS_STEP_2;
                 free(sts_msg_inc);
                 return 0;
         }
 
-        /* TODO slave side, handle RDYREQ */
-        /* TODO master side, handle RDYACK */
+        /* slave side, receive RDYREQ */
+        if (strcmp(sts_msg_header, STS_RDYREQ) == 0) {
+                printf("sts: Ready request received from slave\n");
+                int index_X = 0;
+                int index_Y = 0;
+                char master_QX[MPI_STRING_SIZE];
+                char master_QY[MPI_STRING_SIZE];
+                memset(master_QX, 0, sizeof(master_QX));
+                memset(master_QY, 0, sizeof(master_QY));
+
+                /* extract slave public key X */
+                for (i = 0; i < STS_MSG_MAXLEN; i++) {
+                        if (sts_msg_data[i] == 'Y') {
+                                index_X = index_X - 1;
+                                break;
+                        }
+                        index_X++;
+                }
+                memcpy(master_QX, &sts_msg_data[1], index_X * sizeof(char));
+
+                /* extract slave public key Y */
+                for (i = index_X + 2; i < STS_MSG_MAXLEN; i++) {
+                        if (sts_msg_data[i] == '\0') {
+                                index_Y = index_Y + 1;
+                                break;
+                        }
+                        index_Y++;
+                }
+                memcpy(master_QY, &sts_msg_data[index_X + 2], index_Y * sizeof(char));
+
+                /* copy X Y */
+                mbedtls_ecp_point_read_string(&ctx.host_ecdh_ctx.Qp, 16, master_QX, master_QY);
+
+                /* compute derived_key */
+                memset(ctx.derived_key, 0, sizeof(ctx.derived_key));
+                mbedtls_ecdh_calc_secret(&ctx.host_ecdh_ctx, &olen, ctx.derived_key, 
+                                sizeof(ctx.derived_key), genrand, NULL);
+
+                ctx.slave_flag = STS_STEP_2;
+                free(sts_msg_inc);
+                return 0;
+        }
+
+        /* master side, receive RDYACK */
+        if (strcmp(sts_msg_header, STS_RDYACK) == 0) {
+                ctx.master_flag = STS_STEP_3;
+                return 0;
+        }
         return -1;
 }
 
@@ -259,7 +274,7 @@ static void _on_msg_recv(MessageData *data)
 
         /* handlers if encryption ON */
         if (strcmp(ctx.sts_mode, "master") == 0 || strcmp(ctx.sts_mode, "slave") == 0) {
-                ret = _encryption_handlers(sts_msg_inc);
+                ret = _sts_message_handlers(sts_msg_inc);
         }
 
         if (ret < 0) {
@@ -335,8 +350,35 @@ static int _load_config(const char *config)
         return 0;
 }
 
+static void _reset_ctx(void)
+{
+        ctx.mqtt_version = 0;
+        ctx.qos = 0;
+        ctx.port = 0;
+        ctx.keep_alive = 0;
+        ctx.clean_session = 0;
+        ctx.is_retained = 0;
+        ctx.no_print = 0;
+        ctx.msg_sent = 0;
+        ctx.msg_recv = 0;
+        ctx.status = STS_STOPPED;
+        ctx.master_flag = STS_STEP_0;
+        ctx.slave_flag = STS_STEP_0;
+        memset(ctx.derived_key, 0, sizeof(ctx.derived_key));
+        memset(ctx.topic_sub, 0, sizeof(ctx.topic_sub));
+        memset(ctx.topic_pub, 0, sizeof(ctx.topic_pub));
+        memset(ctx.clientid, 0, sizeof(ctx.clientid));
+        memset(ctx.username, 0, sizeof(ctx.username));
+        memset(ctx.password, 0, sizeof(ctx.password));
+        memset(ctx.id_master, 0, sizeof(ctx.id_master));
+        memset(ctx.id_slave, 0, sizeof(ctx.id_slave));
+        memset(ctx.sts_mode, 0, sizeof(ctx.sts_mode));
+        memset(ctx.ip, 0, sizeof(ctx.ip));
+}
+
 static int _init(const char *config)
 {
+        _reset_ctx();
         int ret = _load_config(config);
         if (ret < 0) {
                 return -1;
@@ -391,9 +433,7 @@ static void _disconnect(void)
                 return;
         }
         NetworkDisconnect(&ctx.network);
-        ctx.status = STS_STOPPED;
-        ctx.msg_sent = 0;
-        ctx.msg_recv = 0;
+        _reset_ctx();
         printf("sts: disconnected from broker\n");
 }
 
@@ -438,9 +478,12 @@ static int _publish(char *message)
         }
 
         /* echo */
-        printf("> [OUT]: %s\n", message);
-        free(message);
+        if (ctx.no_print == 0) {
+                printf("> [OUT]: %s\n", message);
+        }
+        ctx.no_print = 0;
         ctx.msg_sent++;
+        free(message);
         return 0;
 }
 
@@ -451,9 +494,13 @@ static int _init_sec(void)
         size_t olen = 0;
         char slave_QX[MPI_STRING_SIZE];
         char slave_QY[MPI_STRING_SIZE];
+        char master_QX[MPI_STRING_SIZE];
+        char master_QY[MPI_STRING_SIZE];
 
         memset(slave_QX, 0, sizeof(slave_QX));
         memset(slave_QY, 0, sizeof(slave_QY));
+        memset(master_QX, 0, sizeof(master_QX));
+        memset(master_QY, 0, sizeof(master_QY));
 
         mbedtls_ecdh_init(&ctx.host_ecdh_ctx);
         ret = mbedtls_ecdh_setup(&ctx.host_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
@@ -470,13 +517,15 @@ static int _init_sec(void)
 
         /* MASTER SIDE */
         if (strcmp(ctx.sts_mode, "master") == 0) {
-
                 /* send AUTHREQ to slave 5 times every 5 sec */
-                while (ctx.master_flag != 1 && count < 5) {
+                printf("sts: Sending authentification request to slave...\n");
+                ctx.master_flag = STS_STEP_1;
+                while (ctx.master_flag == STS_STEP_1 && count < 5) {
                         sts_msg_out = malloc(sizeof(STS_MSG_MAXLEN));
                         memset(sts_msg_out, 0, sizeof(STS_MSG_MAXLEN));
                         _concatenate(sts_msg_out, STS_AUTHREQ);
                         _concatenate(sts_msg_out, ctx.id_slave);
+                        ctx.no_print = 1;
                         ret = _publish(sts_msg_out);
                         if (ret < 0) {
                                 free(sts_msg_out);
@@ -491,37 +540,53 @@ static int _init_sec(void)
                                 return -1;
                         }
                 }
-                ctx.master_flag = 0;
 
-                /* TODO send RDYREQ + pubkey to slave */
-                while(ctx.master_flag != 1){
+                /* wait for master handling AUTHACK */
+                while (ctx.master_flag != STS_STEP_2) {};
 
+                /* send RDYREQ + pubkey to slave */
+                printf("sts: Sending ready request...\n");
+                sts_msg_out = malloc(sizeof(STS_MSG_MAXLEN));
+                memset(sts_msg_out, 0, sizeof(STS_MSG_MAXLEN));
+                mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.X, 16, master_QX, MPI_STRING_SIZE, &olen);
+                mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.Y, 16, master_QY, MPI_STRING_SIZE, &olen);
+                _concatenate(sts_msg_out, STS_RDYREQ);
+                _concatenate(sts_msg_out, "X");
+                _concatenate(sts_msg_out, master_QX);
+                _concatenate(sts_msg_out, "Y");
+                _concatenate(sts_msg_out, master_QY);
+
+                ctx.no_print = 1;
+                ret = _publish(sts_msg_out);
+                if (ret < 0) {
+                        printf("sts: error! publish failed\n");
+                        return -1;
                 }
+
+                /* wait for master to handle RDYHACK */
+                while (ctx.master_flag != STS_STEP_3) {};
+                printf("sts: Encrypted communication established with slave\n");
         }
 
         /* SLAVE SIDE */
         if (strcmp(ctx.sts_mode, "slave") == 0) {
-                printf("sts: Waiting for authentification request from master...\n");
-                /* receive AUTHREQ from master */
-                while (1) {
-                        if (ctx.slave_flag == 1) {
-                                printf("sts: Authentification request received from master\n");
-                                if (strcmp(sts_msg_data, ctx.id_slave) == 0) {
-                                        printf("sts: Authentification SUCCESS!\n");
-                                        ctx.slave_flag = 0;
-                                        break;
+loop:           printf("sts: Waiting for authentification request from master...\n");
+                while (ctx.slave_flag == STS_STEP_0) {};
 
-                                } else {
-                                        /* TODO should send it to master so it disconnects */
-                                        printf("sts: Authentification FAILURE!\n");
-                                        ctx.slave_flag = 0;
-                                        continue;
-                                }
-                        }
+                /* receive AUTHREQ from master */
+                printf("sts: Authentification request received from master\n");
+                if (strcmp(sts_msg_data, ctx.id_slave) == 0) {
+                        printf("sts: Authentification SUCCESS!\n");
+
+                } else {
+                        /* TODO should send it to master so it disconnects */
+                        printf("sts: Authentification FAILURE!\n");
+                        ctx.slave_flag = STS_STEP_0;
+                        goto loop;
                 }
 
+                /* TODO should also send id for verification on master side before pubkey */
                 /* send AUTHACK + pubkey to master */
-                /* TODO should also send id for verification on master side */
                 printf("sts: Sending authentification acknowledgement...\n");
                 sts_msg_out = malloc(sizeof(STS_MSG_MAXLEN));
                 memset(sts_msg_out, 0, sizeof(STS_MSG_MAXLEN));
@@ -533,11 +598,30 @@ static int _init_sec(void)
                 _concatenate(sts_msg_out, "Y");
                 _concatenate(sts_msg_out, slave_QY);
 
+                ctx.no_print = 1;
                 ret = _publish(sts_msg_out);
                 if (ret < 0) {
+                        ctx.slave_flag = STS_STEP_0;
                         printf("sts: error! publish failed\n");
                         return -1;
                 }
+
+                /* wait for slave to handle RDYREQ */
+                while (ctx.slave_flag != STS_STEP_2) {}
+
+                /* send RDYACK to slave */
+                sts_msg_out = malloc(sizeof(STS_MSG_MAXLEN));
+                memset(sts_msg_out, 0, sizeof(STS_MSG_MAXLEN));
+                _concatenate(sts_msg_out, STS_RDYACK);
+
+                ctx.no_print = 1;
+                ret = _publish(sts_msg_out);
+                if (ret < 0) {
+                        ctx.slave_flag = STS_STEP_0;
+                        printf("sts: error! publish failed\n");
+                        return -1;
+                }
+                printf("sts: Encrypted communication established with master\n");
         }
         return 0;
 }
@@ -545,6 +629,21 @@ static int _init_sec(void)
 static void _free_sec(void)
 {
         mbedtls_ecdh_free(&ctx.host_ecdh_ctx);
+}
+
+/* TODO temporary for debug */
+static void _print_derived_key(const unsigned char *buf, size_t size) 
+{
+        size_t i;
+        printf("sts: shared_key: ");
+
+        for (i = 0 ; i < size; i++) {
+                if (buf[i] == '\0') {
+                        break;
+                }
+                printf("%02X", buf[i]);
+        }
+        printf("\n");
 }
 
 int sts_start_session(char **argv)
@@ -698,10 +797,17 @@ int sts_status(char **argv)
         printf("sts: keep_alive:      %u\n", ctx.keep_alive);
         printf("sts: clean_session:   %u\n", ctx.clean_session);
         printf("sts: is_retained      %u\n", ctx.is_retained);
-        printf("sts: publish_topic:   %s\n", ctx.topic_pub);
-        printf("sts: subscribe_topic: %s\n", ctx.topic_sub);
+        printf("sts: pub_topic:       %s\n", ctx.topic_pub);
+        printf("sts: sub_topic:       %s\n", ctx.topic_sub);
         printf("sts: msg sent:        %u\n", ctx.msg_sent);
-        printf("sts: msg received:    %u\n", ctx.msg_recv);
+        printf("sts: msg recv:        %u\n", ctx.msg_recv);
+        if (strcmp(ctx.sts_mode, "master") == 0) {
+                _print_derived_key(ctx.derived_key, sizeof(ctx.derived_key));
+
+        }
+        if (strcmp(ctx.sts_mode, "slave") == 0) {
+                _print_derived_key(ctx.derived_key, sizeof(ctx.derived_key));
+        }
 
         return STS_PROMPT;
 }

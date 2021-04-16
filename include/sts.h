@@ -39,9 +39,9 @@
 /* sec */
 #define BYTE                      8
 #define AES_ECB_BLOCKSIZE         16
-#define STS_MSG_MAXLEN            1024
-#define ECDH_SHARED_KEYSIZE_BITS  256
 #define MPI_STRING_SIZE           128
+#define ECDH_SHARED_KEYSIZE_BITS  256
+#define STS_MSG_MAXLEN            1024
 #define ECDH_SHARED_KEYSIZE_BYTES ECDH_SHARED_KEYSIZE_BITS / BYTE
 
 /* return code */
@@ -62,6 +62,13 @@
 #define STS_AUTHACK "AUTHACK:"
 #define STS_RDYREQ  "RDYREQ:"
 #define STS_RDYACK  "RDYACK:"
+#define STS_HEADERSIZE 10
+
+/* sts conn status */
+#define STS_STEP_0 0
+#define STS_STEP_1 1
+#define STS_STEP_2 2
+#define STS_STEP_3 3
 
 struct sts_context {
         unsigned int mqtt_version;
@@ -75,6 +82,7 @@ struct sts_context {
         unsigned short status;
         unsigned short master_flag;
         unsigned short slave_flag;
+        unsigned short no_print;
         unsigned char derived_key[ECDH_SHARED_KEYSIZE_BYTES];
         char topic_sub[CONFIG_VALUE_MAXLENGTH];
         char topic_pub[CONFIG_VALUE_MAXLENGTH];
