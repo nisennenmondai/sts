@@ -10,7 +10,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 /* VARIABLES */
 ////////////////////////////////////////////////////////////////////////////////
-static struct sts_context ctx;
+static struct sts_context ctx = {
+        .status = STS_STOPPED,
+};
 
 static unsigned char sendbuff[SENDBUFFSIZE];
 static unsigned char readbuff[READBUFFSIZE];
@@ -121,7 +123,7 @@ static void _prep_msg_out(char **message)
                 msg_size += strlen(message[i] + 1);
                 i++;
         }
-        sts_msg_out = malloc(sizeof(msg_size));
+        sts_msg_out = malloc(msg_size * sizeof(char));
         memset(sts_msg_out, 0, sizeof(msg_size));
 
         /* copy */
@@ -521,7 +523,7 @@ static int _init_sec(void)
                 printf("sts: Sending authentification request to slave...\n");
                 ctx.master_flag = STS_STEP_1;
                 while (ctx.master_flag == STS_STEP_1 && count < 5) {
-                        sts_msg_out = malloc(sizeof(STS_MSG_MAXLEN));
+                        sts_msg_out = malloc(STS_MSG_MAXLEN * sizeof(char));
                         memset(sts_msg_out, 0, sizeof(STS_MSG_MAXLEN));
                         _concatenate(sts_msg_out, STS_AUTHREQ);
                         _concatenate(sts_msg_out, ctx.id_slave);
@@ -546,7 +548,7 @@ static int _init_sec(void)
 
                 /* send RDYREQ + pubkey to slave */
                 printf("sts: Sending ready request...\n");
-                sts_msg_out = malloc(sizeof(STS_MSG_MAXLEN));
+                sts_msg_out = malloc(STS_MSG_MAXLEN * sizeof(char));
                 memset(sts_msg_out, 0, sizeof(STS_MSG_MAXLEN));
                 mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.X, 16, master_QX, MPI_STRING_SIZE, &olen);
                 mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.Y, 16, master_QY, MPI_STRING_SIZE, &olen);
@@ -588,7 +590,7 @@ loop:           printf("sts: Waiting for authentification request from master...
                 /* TODO should also send id for verification on master side before pubkey */
                 /* send AUTHACK + pubkey to master */
                 printf("sts: Sending authentification acknowledgement...\n");
-                sts_msg_out = malloc(sizeof(STS_MSG_MAXLEN));
+                sts_msg_out = malloc(STS_MSG_MAXLEN * sizeof(char));
                 memset(sts_msg_out, 0, sizeof(STS_MSG_MAXLEN));
                 mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.X, 16, slave_QX, MPI_STRING_SIZE, &olen);
                 mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.Y, 16, slave_QY, MPI_STRING_SIZE, &olen);
@@ -610,7 +612,7 @@ loop:           printf("sts: Waiting for authentification request from master...
                 while (ctx.slave_flag != STS_STEP_2) {}
 
                 /* send RDYACK to slave */
-                sts_msg_out = malloc(sizeof(STS_MSG_MAXLEN));
+                sts_msg_out = malloc(STS_MSG_MAXLEN * sizeof(char));
                 memset(sts_msg_out, 0, sizeof(STS_MSG_MAXLEN));
                 _concatenate(sts_msg_out, STS_RDYACK);
 
@@ -774,6 +776,7 @@ int sts_exit(char **argv)
         return STS_EXIT;
 }
 
+/* TODO make a beautiful status with more info on security */
 int sts_status(char **argv)
 {
         (void)argv;
