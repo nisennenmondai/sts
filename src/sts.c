@@ -22,43 +22,8 @@ static unsigned int thrd_msg_type = 0;
 static pthread_t _mqttyield_thrd_pid;
 
 ////////////////////////////////////////////////////////////////////////////////
-/* STS COMMANDS LISTS */
+/* TOOLS */
 ////////////////////////////////////////////////////////////////////////////////
-static char *builtin_cmd[] = {
-        "help",
-        "exit",
-        "start",
-        "stop",
-        "status",
-        "sendtest",
-        "sectest",
-};
-
-static char *builtin_cmd_desc[] = {
-        "help              prints all commands                        |",
-        "exit              exit shell                                 |",
-        "start [CONFIG]    start STS session                          |",
-        "stop              stop STS session                           |",
-        "                  example: 'send blah1 blah2 blah3'          |\n| "
-                "status            display status of current session          |",
-        "sendtest [MSG]    send a message to the broker               |",
-        "sectest [MSG]     ecdh aes enc/dec test (no space)           |",
-};
-
-static int (*builtin_func[]) (char **argv) = {
-        &sts_help,
-        &sts_exit,
-        &sts_start_session,
-        &sts_stop_session,
-        &sts_status,
-        &sts_send_test,
-        &sts_ecdh_aes_test,
-};
-
-static int sts_num_builtins(void) {
-        return sizeof(builtin_cmd) / sizeof(char *);
-}
-
 static void _concatenate(char p[], char q[]) {
         int c = 0;
         int d = 0;
@@ -88,6 +53,46 @@ static void _print_derived_key(const unsigned char *buf, size_t size)
                 printf("%02X", buf[i]);
         }
         printf("\n");
+}
+
+struct sts_context *sts_get_ctx(void)
+{
+        return &ctx;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/* STS COMMANDS LISTS */
+////////////////////////////////////////////////////////////////////////////////
+static char *builtin_cmd[] = {
+        "help",
+        "exit",
+        "start",
+        "stop",
+        "status",
+        "send",
+};
+
+static char *builtin_cmd_desc[] = {
+        "help              prints all commands                        |",
+        "exit              exit shell                                 |",
+        "start [CONFIG]    start STS session                          |",
+        "stop              stop STS session                           |",
+        "                  example: 'send blah1 blah2 blah3'          |\n| "
+                "status            display status of current session          |",
+        "send [MSG]        send a message to the broker               |",
+};
+
+static int (*builtin_func[]) (char **argv) = {
+        &sts_help,
+        &sts_exit,
+        &sts_start_session,
+        &sts_stop_session,
+        &sts_status,
+        &sts_send,
+};
+
+static int sts_num_builtins(void) {
+        return sizeof(builtin_cmd) / sizeof(char *);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -700,7 +705,7 @@ int sts_stop_session(char **argv)
         return STS_PROMPT;
 }
 
-int sts_send_test(char **message)
+int sts_send(char **message)
 {
         int ret = 0;
         int i = 1;
@@ -817,7 +822,7 @@ int sts_status(char **argv)
 ////////////////////////////////////////////////////////////////////////////////
 /* CORE SHELL */
 ////////////////////////////////////////////////////////////////////////////////
-static void sts_welcome(void)
+void sts_welcome(void)
 {
         printf("+--------------------------------------------------------------+\n");
         printf("|                    Secure Telemetry Shell                    |\n");
@@ -962,7 +967,7 @@ static int sts_execute(char **argv)
 }
 
 /* loop getting input and executing it */
-static void sts_loop(void)
+void sts_loop(void)
 {
         char *line;
         char **argv;
@@ -978,14 +983,4 @@ static void sts_loop(void)
                 free(argv);
         } while (status);
         return;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/* STS MAIN */
-////////////////////////////////////////////////////////////////////////////////
-int main(void)
-{
-        sts_welcome();
-        sts_loop();
-        return 0;
 }

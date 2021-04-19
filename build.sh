@@ -17,3 +17,7 @@ cd ../../
 
 #sts
 make
+
+#tests
+cd tests/enc_dec/
+make

@@ -108,8 +108,17 @@ int sts_help(char **argv);
 int sts_exit(char **argv);
 int sts_start_session(char **argv);
 int sts_stop_session(char **argv);
-int sts_send_test(char **argv);
+int sts_send(char **argv);
 int sts_status(char **argv);
-int sts_ecdh_aes_test(char **argv);
+int sts_ecdh_aes_test(void);
+
+void sts_welcome(void);
+void sts_loop(void);
 int genrand(void *rng_state, unsigned char *output, size_t len);
+struct sts_context *sts_get_ctx(void);
+
+void sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
+                unsigned char *output, size_t size);
+void sts_decrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
+                unsigned char *output, size_t size);
 #endif /* STS_H */
