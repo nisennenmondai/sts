@@ -70,6 +70,11 @@
 #define STS_STEP_2 2
 #define STS_STEP_3 3
 
+struct sts_message {
+        char header[STS_HEADERSIZE]; /* max header length */
+        char data[STS_MSG_MAXLEN];
+};
+
 struct sts_context {
         unsigned int mqtt_version;
         unsigned int qos;

@@ -15,6 +15,7 @@ CFLAGS += -Ilib/mbedtls/include/mbedtls/
 LDLIBS += -lpaho-embed-mqtt3cc
 LDLIBS += -lmbedcrypto
 LDLIBS += -lpthread
+LDLIBS += -lm
 
 .PHONY: all clean
 
