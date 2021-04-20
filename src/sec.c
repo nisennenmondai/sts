@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 
 #include "sts.h"
+#include "log.h"
 
 /* TODO this should not be used for cryptography, use mbedtls for rnd number */
-int genrand(void *rng_state, unsigned char *output, size_t len)
+int sts_genrand(void *rng_state, unsigned char *output, size_t len)
 {
         size_t use_len;
         int rnd;
@@ -50,6 +50,21 @@ int sts_verify_derived_keylen(const unsigned char *buf, size_t size, size_t len)
         } else {
                 return -1;
         }
+}
+
+/* TODO temporary for debug */
+void sts_print_derived_key(const unsigned char *buf, size_t size) 
+{
+        size_t i;
+        INFO("sts: shared_key: ");
+
+        for (i = 0 ; i < size; i++) {
+                if (buf[i] == '\0') {
+                        break;
+                }
+                printf("%02X", buf[i]);
+        }
+        printf("\n");
 }
 
 void sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 

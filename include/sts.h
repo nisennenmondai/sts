@@ -19,6 +19,7 @@
 #define STS_H
 
 #include <stdlib.h>
+#include <time.h>
 
 #include "MQTTLinux.h"
 #include "MQTTClient.h"
@@ -80,6 +81,7 @@ struct sts_context {
         unsigned int is_retained;
         unsigned int msg_sent;
         unsigned int msg_recv;
+        unsigned int thrd_msg_type;
         unsigned short status;
         unsigned short master_flag;
         unsigned short slave_flag;
@@ -99,6 +101,20 @@ struct sts_context {
         mbedtls_ecdh_context host_ecdh_ctx;
 };
 
+/* mqtt */
+void mqtt_disconnect(void);
+int mqtt_connect(void);
+int mqtt_unsubscribe(void);
+int mqtt_subscribe(void);
+int mqtt_publish(char *message);
+
+/* sts */
+void sts_free_sec(void);
+void sts_reset_ctx(void);
+int sts_init(const char *config);
+int sts_init_sec(void);
+struct sts_context *sts_get_ctx(void);
+
 /* sts commands */
 int sts_help(char **argv);
 int sts_exit(char **argv);
@@ -106,17 +122,19 @@ int sts_start_session(char **argv);
 int sts_stop_session(char **argv);
 int sts_send(char **argv);
 int sts_status(char **argv);
-int sts_ecdh_aes_test(void);
-
-void sts_welcome(void);
-void sts_loop(void);
-int genrand(void *rng_state, unsigned char *output, size_t len);
-struct sts_context *sts_get_ctx(void);
 
 /* security */
 void sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
                 unsigned char *output, size_t size);
 void sts_decrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
                 unsigned char *output, size_t size);
+void sts_print_derived_key(const unsigned char *buf, size_t size);
 int sts_verify_derived_keylen(const unsigned char *buf, size_t size, size_t len);
+int sts_genrand(void *rng_state, unsigned char *output, size_t len);
+
+/* tests */
+int sts_ecdh_aes_test(void);
+
+/* tools */
+void sts_concatenate(char p[], char q[]);
 #endif /* STS_H */
