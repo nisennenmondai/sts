@@ -4,30 +4,27 @@
 #include "sts.h"
 #include "log.h"
 
-/* TODO this should not be used for cryptography, use mbedtls for rnd number */
+#include "ctr_drbg.h"
+#include "entropy.h"
+
+/* TODO error handling */
 int sts_genrand(void *rng_state, unsigned char *output, size_t len)
 {
-        size_t use_len;
-        int rnd;
-
-        if (rng_state != NULL)
+        if (rng_state != NULL) {
                 rng_state  = NULL;
-
-        while (len > 0)
-        {
-                use_len = len;
-                if (use_len > sizeof(int))
-                        use_len = sizeof(int);
-
-                srand(time(NULL));
-                /* usleep is only for test, or else same keypair will be 
-                 * generated for both host and remote */
-                usleep(25000); 
-                rnd = rand()%100;
-                memcpy(output, &rnd, use_len);
-                output += use_len;
-                len -= use_len;
         }
+
+        mbedtls_ctr_drbg_context ctr_drbg;
+        mbedtls_entropy_context entropy;
+
+        mbedtls_ctr_drbg_init(&ctr_drbg);
+        mbedtls_entropy_init(&entropy);
+        mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, 
+                        (const unsigned char *) "RANDOM_GEN", 10);
+        mbedtls_ctr_drbg_random(&ctr_drbg, output, sizeof(len));
+
+        mbedtls_ctr_drbg_free(&ctr_drbg);
+        mbedtls_entropy_free(&entropy);
         return 0;
 }
 
