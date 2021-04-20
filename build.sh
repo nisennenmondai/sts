@@ -5,14 +5,14 @@ git submodule update --init --recursive
 cd lib/paho-mqtt
 cmake .
 make
-sudo make install
+make install
 cd ../../
 
 #mbed
 cd lib/mbedtls/
 cmake .
 make
-sudo make install
+make install
 cd ../../
 
 #sts

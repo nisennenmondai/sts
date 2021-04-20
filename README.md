@@ -12,7 +12,7 @@ Check "template_config_", this is noob level parsing, do not remove space before
 - is_retained   = 0 || 1
 
 #### How to use
-- ./buils.sh (sudo make install install lib.so files)
+- sudo ./buils.sh 
 - cd bin/
 - ./sts
 - start ../path_to_your_config_file
