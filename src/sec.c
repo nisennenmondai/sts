@@ -31,6 +31,27 @@ int genrand(void *rng_state, unsigned char *output, size_t len)
         return 0;
 }
 
+int sts_verify_derived_keylen(const unsigned char *buf, size_t size, size_t len)
+{
+        size_t i;
+        size_t tmp = 0;
+        size_t shared_keysize;
+        for (i = 0 ; i < size; i++) {
+                if (buf[i] == '\0') {
+                        break;
+                }
+                tmp++;
+        }
+        shared_keysize = tmp * BYTE;
+
+        if (shared_keysize == len) {
+                return 0;
+
+        } else {
+                return -1;
+        }
+}
+
 void sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
                 unsigned char *output, size_t size)
 {

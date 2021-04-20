@@ -1,5 +1,5 @@
 SRC_DIR += ../../src
-SRC += ../enc_dec/tests.c
+SRC_TST += ../ecdh_aes_ecp_256/ecdh_aes_ecp_256.c
 SRC_STS += $(filter-out $(SRC_DIR)/main.c, $(wildcard $(SRC_DIR)/*.c))
 
 CFLAGS += -Wall
@@ -15,4 +15,4 @@ LDLIBS += -lpthread
 LDLIBS += -lm
 
 all:
-	gcc $(SRC_STS) $(SRC) $(CFLAGS) $(LDLIBS) -o enc_dec
+	gcc $(SRC_STS) $(SRC_TST) $(CFLAGS) $(LDLIBS) -o ecdh_aes_ecp_256

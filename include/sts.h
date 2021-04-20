@@ -41,7 +41,6 @@
 #define AES_ECB_BLOCKSIZE         16
 #define MPI_STRING_SIZE           128
 #define ECDH_SHARED_KEYSIZE_BITS  256
-#define STS_MSG_MAXLEN            1024
 #define ECDH_SHARED_KEYSIZE_BYTES ECDH_SHARED_KEYSIZE_BITS / BYTE
 
 /* return code */
@@ -53,16 +52,13 @@
 #define STS_STOPPED 1
 #define STS_KILL_THREAD 1
 
-/* sec test */
-#define STS_HOST    0
-#define STS_REMOTE  1
-
 /* sts message types */
 #define STS_AUTHREQ "AUTHREQ:"
 #define STS_AUTHACK "AUTHACK:"
 #define STS_RDYREQ  "RDYREQ:"
 #define STS_RDYACK  "RDYACK:"
 #define STS_HEADERSIZE 10
+#define STS_MSG_MAXLEN 1024
 
 /* sts conn status */
 #define STS_STEP_0 0
@@ -117,8 +113,10 @@ void sts_loop(void);
 int genrand(void *rng_state, unsigned char *output, size_t len);
 struct sts_context *sts_get_ctx(void);
 
+/* security */
 void sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
                 unsigned char *output, size_t size);
 void sts_decrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
                 unsigned char *output, size_t size);
+int sts_verify_derived_keylen(const unsigned char *buf, size_t size, size_t len);
 #endif /* STS_H */

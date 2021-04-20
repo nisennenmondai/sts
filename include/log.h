@@ -25,6 +25,8 @@
  *          to prevent data loss (or further data loss). I reserve these only 
  *          for the most heinous errors and situations where there is guaranteed 
  *          to have been data corruption or loss.
+ *
+ *  Tests - For tests 
  */
 #ifndef LOG_H
 #define LOG_H
@@ -41,6 +43,7 @@
 #define FMT_DEBUG " - [DEBUG] # "
 #define FMT_ERROR " - [ERROR] # "
 #define FMT_FATAL " - [FATAL] # "
+#define FMT_TESTS " - [TESTS] # "
 
 #define INFO(...)  print(FMT_INFO  __VA_ARGS__) 
 #define WARN(...)  print(FMT_WARN  __VA_ARGS__) 
@@ -48,6 +51,7 @@
 #define DEBUG(...) print(FMT_DEBUG __VA_ARGS__) 
 #define ERROR(...) print(FMT_ERROR __VA_ARGS__) 
 #define FATAL(...) print(FMT_FATAL __VA_ARGS__) 
+#define TESTS(...) print(FMT_TESTS __VA_ARGS__) 
 
 #define BUFFSIZE 25
 #define MSSIZE   7

@@ -1,6 +1,6 @@
 bin/
 obj/
-tests/enc_dec/enc_dec
 tags
 config_master
 config_slave
+tests/ecdh_aes_ecp_256/ecdh_aes_ecp_256
