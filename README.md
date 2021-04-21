@@ -1,24 +1,32 @@
 # Secure Telemetry Shell 
-MQTT client with end to end encryption for embedded Linux
+MQTT client with end to end encryption for Linux
 -------
-#### Regarding config file
-Check "template_config_", this is noob level parsing, do not remove space before and after '='
-- [key] = [value] ---> ip = 66.66.66.66
-- max char for [value] = 128
+#### Config file
+This is noob level parsing, do not remove space before and after '='
 - sts_mode = nosec || master || slave
 - qos = 0 || 1 || 2
-- clean_session = 0 || 1
-- keep_alive    = 0 || 1
-- is_retained   = 0 || 1
+
+Those 3 config files use a public MQTT broker, **THERE IS NO PRIVACY PROTECTION**, get it?
+- https://www.emqx.io/mqtt/public-mqtt5-broker
+- Broker: broker.emqx.io
+- TCP Port: 1883
 
 #### How to use
 - sudo ./buils.sh 
 - cd bin/
 - ./sts
-- start ../path_to_your_config_file
+- start ../config_nosec
 
-#### TODO implement security features
-- I want to be able to send encrypted message to a remote client, that includes
-  having a key exchange protocole using ECDH
-- I want to have digital signature using ECDSA
-- I want to support a better AES algorithm than ECB
+### TODO implement security features
+- I want to send encrypted message to a remote client, that includes
+  having a key exchange protocole using ECDH **90%**
+- I want to support a better AES algorithm than ECB **0%**
+
+### TODO make beautiful tests
+- blah blah blah **5%**
+
+### TODO improve mqtt client
+- subscribe to multiple topics **0%**
+
+### TODO make beautiful documentation
+- howto **1%**

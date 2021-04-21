@@ -1,0 +1,15 @@
+ip   = 52.36.58.151
+port = 1883
+qos  = 0
+username = nosec
+password = nosec
+subtop   = nisennenmondai
+pubtop   = nisennenmondai
+mqtt_version  = 4
+clientid      = test_nosec
+clean_session = 1
+keep_alive    = 0
+is_retained   = 0
+sts_mode      = nosec
+id_master     = sd#^$&*^jfh32if
+id_slave      = d$fm%d5-#_-mfls
