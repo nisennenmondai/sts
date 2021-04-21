@@ -7,9 +7,9 @@
 #include "ctr_drbg.h"
 #include "entropy.h"
 
-/* TODO error handling */
 int sts_genrand(void *rng_state, unsigned char *output, size_t len)
 {
+        int ret;
         if (rng_state != NULL) {
                 rng_state  = NULL;
         }
@@ -19,13 +19,26 @@ int sts_genrand(void *rng_state, unsigned char *output, size_t len)
 
         mbedtls_ctr_drbg_init(&ctr_drbg);
         mbedtls_entropy_init(&entropy);
-        mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, 
-                        (const unsigned char *) "RANDOM_GEN", 10);
-        mbedtls_ctr_drbg_random(&ctr_drbg, output, sizeof(len));
 
+        ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, 
+                        (const unsigned char *) "RANDOM_GEN", 16);
+
+        if (ret != 0) {
+                ERROR("mbedtls_ctr_drbg_seed()\n");
+                goto cleanup;
+        }
+
+        ret = mbedtls_ctr_drbg_random(&ctr_drbg, output, sizeof(len));
+
+        if (ret != 0) {
+                ERROR("mbedtls_ctr_drbg_random()\n");
+                goto cleanup;
+        }
+
+cleanup:
         mbedtls_ctr_drbg_free(&ctr_drbg);
         mbedtls_entropy_free(&entropy);
-        return 0;
+        return ret;
 }
 
 int sts_verify_derived_keylen(const unsigned char *buf, size_t size, size_t len)

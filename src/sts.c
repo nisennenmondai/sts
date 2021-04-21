@@ -11,8 +11,9 @@
 /* VARIABLES */
 ////////////////////////////////////////////////////////////////////////////////
 static struct sts_context ctx = {
-        .status = STS_STOPPED,
-        .thrd_msg_type = 0,
+        .status      = STS_STOPPED,
+        .master_flag = STS_STEP_0,
+        .slave_flag  = STS_STEP_0,
 };
 
 static unsigned char sendbuff[SENDBUFFSIZE];
@@ -100,76 +101,120 @@ static void _sts_handlers(struct sts_message *msg)
 {
         size_t olen;
 
-        /* slave side, receive AUTHREQ */
-        if (strcmp(msg->header, STS_AUTHREQ) == 0 && 
-                        ctx.slave_flag == STS_STEP_0) {
-                if (strcmp(msg->data, ctx.id_slave) == 0) {
-                        ctx.slave_flag = STS_STEP_1;
-                        return;
+        /* SLAVE SIDE */
+        if (strcmp(ctx.sts_mode, "slave") == 0) {
+                /* receive AUTHREQ from master*/
+                if (strcmp(msg->header, STS_AUTHREQ) == 0 && 
+                                ctx.slave_flag == STS_STEP_0) {
+                        INFO("sts: Received AUTHREQ from master\n");
+                        if (strcmp(msg->data, ctx.id_slave) == 0) {
+                                INFO("sts: Authentication success\n");
+                                ctx.slave_flag = STS_STEP_1;
+                                return;
 
-                } else {
-                        /* TODO should send it to master so it disconnects */
-                        ERROR("sts: Authentification FAILURE!\n");
+                        } else {
+                                ERROR("sts: Authentication FAILURE! master sent wrong ID\n");
+                                return;
+                        }
+                }
+
+                /* receive AUTHACK from master */
+                if (strcmp(msg->header, STS_AUTHACK) == 0 && 
+                                ctx.slave_flag ==  STS_STEP_1) {
+                        INFO("sts: Received AUTHACK from master\n");
+                        ctx.slave_flag = STS_STEP_2;
+                }
+
+                /* receive RDYREQ from master */
+                if (strcmp(msg->header, STS_RDYREQ) == 0 && 
+                                ctx.slave_flag ==  STS_STEP_2) {
+                        char master_QX[MPI_STRING_SIZE];
+                        char master_QY[MPI_STRING_SIZE];
+
+                        memset(master_QX, 0, sizeof(master_QX));
+                        memset(master_QY, 0, sizeof(master_QY));
+
+                        _sts_extract_pubkey(master_QX, master_QY, msg);
+
+                        /* copy X Y */
+                        mbedtls_ecp_point_read_string(&ctx.host_ecdh_ctx.Qp, 16, 
+                                        master_QX, master_QY);
+
+                        /* compute derived_key */
+                        memset(ctx.derived_key, 0, sizeof(ctx.derived_key));
+                        mbedtls_ecdh_calc_secret(&ctx.host_ecdh_ctx, &olen, 
+                                        ctx.derived_key, sizeof(ctx.derived_key), 
+                                        sts_genrand, NULL);
+                        INFO("sts: Received RDYREQ from master\n");
+                        ctx.slave_flag = STS_STEP_3;
+                        return;
+                }
+
+                /* receive RDYACK from master */
+                if (strcmp(msg->header, STS_RDYACK) == 0 && 
+                                ctx.slave_flag ==  STS_STEP_3) {
+                        INFO("sts: Received RDYACK from master\n");
+                        ctx.slave_flag = STS_STEP_4;
                         return;
                 }
         }
 
-        /* master side, receive AUTHACK */
-        /* TODO master should handle wrong id feedback with disconnection */
-        if (strcmp(msg->header, STS_AUTHACK) == 0 && 
-                        ctx.master_flag ==  STS_STEP_1) {
-                char slave_QX[MPI_STRING_SIZE];
-                char slave_QY[MPI_STRING_SIZE];
+        /* MASTER SIDE */
+        if (strcmp(ctx.sts_mode, "master") == 0) {
+                /* receive AUTHACK from slave */
+                if (strcmp(msg->header, STS_AUTHACK) == 0 && 
+                                ctx.master_flag ==  STS_STEP_0) {
+                        INFO("sts: Received AUTHACK from slave\n");
+                        ctx.master_flag = STS_STEP_1;
+                }
 
-                memset(slave_QX, 0, sizeof(slave_QX));
-                memset(slave_QY, 0, sizeof(slave_QY));
+                /* receive AUTHREQ from slave */
+                if (strcmp(msg->header, STS_AUTHREQ) == 0 && 
+                                ctx.master_flag == STS_STEP_1) {
+                        INFO("sts: Received AUTHREQ from slave\n");
+                        if (strcmp(msg->data, ctx.id_master) == 0) {
+                                INFO("sts: Authentication success\n");
+                                ctx.master_flag = STS_STEP_2;
+                                return;
 
-                _sts_extract_pubkey(slave_QX, slave_QY, msg);
+                        } else {
+                                ERROR("sts: Authentication FAILURE! slave sent wrong ID\n");
+                                return;
+                        }
+                }
 
-                /* copy X Y */
-                mbedtls_ecp_point_read_string(&ctx.host_ecdh_ctx.Qp, 16, 
-                                slave_QX, slave_QY);
+                /* receive RDYACK from slave */
+                if (strcmp(msg->header, STS_RDYACK) == 0 && 
+                                ctx.master_flag == STS_STEP_2) {
+                        INFO("sts: Received RDYACK from slave\n");
+                        ctx.master_flag = STS_STEP_3;
+                        return;
+                }
 
-                /* compute derived_key */
-                memset(ctx.derived_key, 0, sizeof(ctx.derived_key));
-                mbedtls_ecdh_calc_secret(&ctx.host_ecdh_ctx, &olen, 
-                                ctx.derived_key, sizeof(ctx.derived_key), 
-                                sts_genrand, NULL);
+                /* receive RDYREQ from slave */
+                if (strcmp(msg->header, STS_RDYREQ) == 0 && 
+                                ctx.master_flag ==  STS_STEP_3) {
+                        char slave_QX[MPI_STRING_SIZE];
+                        char slave_QY[MPI_STRING_SIZE];
 
-                ctx.master_flag = STS_STEP_2;
-                return;
-        }
+                        memset(slave_QX, 0, sizeof(slave_QX));
+                        memset(slave_QY, 0, sizeof(slave_QY));
 
-        /* slave side, receive RDYREQ */
-        if (strcmp(msg->header, STS_RDYREQ) == 0 && 
-                        ctx.slave_flag ==  STS_STEP_1) {
-                char master_QX[MPI_STRING_SIZE];
-                char master_QY[MPI_STRING_SIZE];
+                        _sts_extract_pubkey(slave_QX, slave_QY, msg);
 
-                memset(master_QX, 0, sizeof(master_QX));
-                memset(master_QY, 0, sizeof(master_QY));
+                        /* copy X Y */
+                        mbedtls_ecp_point_read_string(&ctx.host_ecdh_ctx.Qp, 16, 
+                                        slave_QX, slave_QY);
 
-                _sts_extract_pubkey(master_QX, master_QY, msg);
-
-                /* copy X Y */
-                mbedtls_ecp_point_read_string(&ctx.host_ecdh_ctx.Qp, 16, 
-                                master_QX, master_QY);
-
-                /* compute derived_key */
-                memset(ctx.derived_key, 0, sizeof(ctx.derived_key));
-                mbedtls_ecdh_calc_secret(&ctx.host_ecdh_ctx, &olen, 
-                                ctx.derived_key, sizeof(ctx.derived_key), 
-                                sts_genrand, NULL);
-
-                ctx.slave_flag = STS_STEP_2;
-                return;
-        }
-
-        /* master side, receive RDYACK */
-        if (strcmp(msg->header, STS_RDYACK) == 0 && 
-                        ctx.master_flag == STS_STEP_2) {
-                ctx.master_flag = STS_STEP_3;
-                return;
+                        /* compute derived_key */
+                        memset(ctx.derived_key, 0, sizeof(ctx.derived_key));
+                        mbedtls_ecdh_calc_secret(&ctx.host_ecdh_ctx, &olen, 
+                                        ctx.derived_key, sizeof(ctx.derived_key), 
+                                        sts_genrand, NULL);
+                        INFO("sts: Received RDYREQ from slave\n");
+                        ctx.master_flag = STS_STEP_4;
+                        return;
+                }
         }
 }
 
@@ -231,7 +276,9 @@ static int _sts_load_config(const char *config)
                 } else {
                         ERROR("sts: wrong key in config file, please "
                                         "see 'template_config'\n");
-                        return STS_PROMPT;
+                        fclose(fp);
+                        config = NULL;
+                        return -1;
                 }
         }
         fclose(fp);
@@ -265,6 +312,8 @@ void sts_reset_ctx(void)
         ctx.no_print = 0;
         ctx.msg_sent = 0;
         ctx.msg_recv = 0;
+        ctx.thrd_msg_type = 0;
+        ctx.no_print = 0;
         ctx.status = STS_STOPPED;
         ctx.master_flag = STS_STEP_0;
         ctx.slave_flag = STS_STEP_0;
@@ -455,49 +504,63 @@ int sts_init_sec(void)
 
         mbedtls_ecdh_init(&ctx.host_ecdh_ctx);
         ret = mbedtls_ecdh_setup(&ctx.host_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
-        if (ret < 0) {
+        if (ret != 0) {
                 return -1;
         }
         ret = mbedtls_ecdh_gen_public(&ctx.host_ecdh_ctx.grp, 
                         &ctx.host_ecdh_ctx.d, &ctx.host_ecdh_ctx.Q, sts_genrand, 
                         NULL);
-        if (ret < 0) {
+        if (ret != 0) {
                 return -1;
         }
-
         INFO("sts: ecdh keypair generated\n");
 
         /* MASTER SIDE */
         if (strcmp(ctx.sts_mode, "master") == 0) {
-                /* send AUTHREQ to slave 5 times every 5 sec */
-                INFO("sts: Sending authentification request to slave...\n");
-                ctx.master_flag = STS_STEP_1;
-                while (ctx.master_flag == STS_STEP_1 && count < 5) {
+                /* send AUTHREQ to slave 5 times every 5 sec &&
+                 * wait AUTHACK from slave */
+                INFO("sts: Sending AUTHREQ to slave...\n");
+                while (ctx.master_flag == STS_STEP_0 && count < 5) {
                         memset(msg_out, 0, sizeof(msg_out));
                         sts_concatenate(msg_out, STS_AUTHREQ);
                         sts_concatenate(msg_out, ctx.id_slave);
-                        ctx.no_print = 1;
+                        ctx.no_print = 0;
                         ret = mqtt_publish(msg_out);
                         if (ret < 0) {
-                                ERROR("sts: authentification failed\n");
+                                ERROR("sts: publish failed\n");
                                 return -1;
                         }
                         count++;
                         sleep(5);
                         if (count == 5) {
                                 count = 0;
-                                ERROR("sts: authentification request failed "
+                                ERROR("sts: Authentication request failed "
                                                 "after 5 attempts\n");
                                 return -1;
                         }
                 }
 
-                /* wait for master handling AUTHACK */
-                while (ctx.master_flag != STS_STEP_2) {};
-                INFO("sts: Authentification SUCCESS!\n");
+                /* wait AUTHREQ from slave */
+                INFO("sts: Waiting AUTHREQ from slave\n");
+                while (ctx.master_flag == STS_STEP_1) {};
 
-                /* send RDYREQ + pubkey to slave */
-                INFO("sts: Sending ready request...\n");
+                /* send AUTHACK to slave */
+                INFO("sts: Sending AUTHACK to slave...\n");
+                memset(msg_out, 0, sizeof(msg_out));
+                sts_concatenate(msg_out, STS_AUTHACK);
+
+                ctx.no_print = 0;
+                ret = mqtt_publish(msg_out);
+                if (ret < 0) {
+                        ERROR("sts: publish failed\n");
+                        return -1;
+                }
+
+                /* give time to slave */
+                sleep(1);
+
+                /* send RDYREQ to slave */
+                INFO("sts: Sending RDYREQ to slave...\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.X, 16, master_QX, 
                                 MPI_STRING_SIZE, &olen);
@@ -509,42 +572,106 @@ int sts_init_sec(void)
                 sts_concatenate(msg_out, "Y");
                 sts_concatenate(msg_out, master_QY);
 
-                ctx.no_print = 1;
+                ctx.no_print = 0;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
                         ERROR("sts: publish failed\n");
                         return -1;
                 }
 
-                /* wait for master to handle RDYHACK */
-                while (ctx.master_flag != STS_STEP_3) {};
+                /* wait RDYACK from slave */
+                INFO("sts: Waiting RDYACK from slave\n");
+                while (ctx.master_flag == STS_STEP_2) {};
+
+                /* wait RDYREQ from slave */
+                INFO("sts: Waiting RDYREQ from slave\n");
+                while (ctx.master_flag == STS_STEP_3) {};
+
+                /* send RDYACK to slave */
+                INFO("sts: Sending RDYACK to slave\n");
+                memset(msg_out, 0, sizeof(msg_out));
+                sts_concatenate(msg_out, STS_RDYACK);
+
+                ctx.no_print = 0;
+                ret = mqtt_publish(msg_out);
+                if (ret < 0) {
+                        ERROR("sts: publish failed\n");
+                        return -1;
+                }
+
                 INFO("sts: Encryption established with slave\n");
+                return 0;
         }
 
         /* SLAVE SIDE */
         if (strcmp(ctx.sts_mode, "slave") == 0) {
-                INFO("sts: Waiting for authentification request from master\n");
-                /* wait for master to send auth request */
+                /* wait AUTHREQ from master */
+                INFO("sts: Waiting AUTHREQ from master\n");
                 while (ctx.slave_flag == STS_STEP_0) {};
-                INFO("sts: Authentification request received from master\n");
-                INFO("sts: Authentification SUCCESS!\n");
 
-                /* TODO should also send id for verification on master side 
-                 * before pubkey */
-                /* send AUTHACK + pubkey to master */
-                INFO("sts: Sending authentification acknowledgement...\n");
+                /* send AUTHACK to master */
+                INFO("sts: Sending AUTHACK to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
+                sts_concatenate(msg_out, STS_AUTHACK);
+                ctx.no_print = 0;
+                ret = mqtt_publish(msg_out);
+                if (ret < 0) {
+                        ctx.slave_flag = STS_STEP_0;
+                        ERROR("sts: publish failed\n");
+                        return -1;
+                }
+
+                /* give time to master */
+                sleep(1);
+
+                /* send AUTHREQ to master */
+                INFO("sts: Sending AUTHREQ\n");
+                memset(msg_out, 0, sizeof(msg_out));
+                sts_concatenate(msg_out, STS_AUTHREQ);
+                sts_concatenate(msg_out, ctx.id_master);
+                ctx.no_print = 0;
+                ret = mqtt_publish(msg_out);
+                if (ret < 0) {
+                        ctx.slave_flag = STS_STEP_0;
+                        ERROR("sts: publish failed\n");
+                        return -1;
+                }
+
+                /* wait AUTHACK from master */
+                INFO("sts: Waiting AUTHACK from master\n");
+                while (ctx.slave_flag == STS_STEP_1) {};
+
+                /* wait RDYREQ from master */
+                INFO("sts: Waiting RDYREQ from master\n");
+                while (ctx.slave_flag == STS_STEP_2) {};
+
+                /* send RDYACK to master */
+                INFO("sts: Sending RDYACK to master\n");
+                memset(msg_out, 0, sizeof(msg_out));
+                sts_concatenate(msg_out, STS_RDYACK);
+                ctx.no_print = 0;
+                ret = mqtt_publish(msg_out);
+                if (ret < 0) {
+                        ctx.slave_flag = STS_STEP_0;
+                        ERROR("sts: publish failed\n");
+                        return -1;
+                }
+
+                /* give time to master */
+                sleep(1);
+
+                /* send RDYREQ */
+                INFO("sts: Sending RDYREQ to master\n");
                 mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.X, 16, slave_QX, 
                                 MPI_STRING_SIZE, &olen);
                 mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.Y, 16, slave_QY, 
                                 MPI_STRING_SIZE, &olen);
-                sts_concatenate(msg_out, STS_AUTHACK);
+                memset(msg_out, 0, sizeof(msg_out));
                 sts_concatenate(msg_out, "X");
                 sts_concatenate(msg_out, slave_QX);
                 sts_concatenate(msg_out, "Y");
                 sts_concatenate(msg_out, slave_QY);
-
-                ctx.no_print = 1;
+                ctx.no_print = 0;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
                         ctx.slave_flag = STS_STEP_0;
@@ -552,22 +679,12 @@ int sts_init_sec(void)
                         return -1;
                 }
 
-                /* wait for slave to handle RDYREQ */
-                while (ctx.slave_flag != STS_STEP_2) {}
-                INFO("sts: Ready request received from slave\n");
+                /* wait RDYACK from master */
+                INFO("sts: Waiting RDYACK from master\n");
+                while (ctx.slave_flag == STS_STEP_3) {};
 
-                /* send RDYACK to slave */
-                memset(msg_out, 0, sizeof(msg_out));
-                sts_concatenate(msg_out, STS_RDYACK);
-
-                ctx.no_print = 1;
-                ret = mqtt_publish(msg_out);
-                if (ret < 0) {
-                        ctx.slave_flag = STS_STEP_0;
-                        ERROR("sts: publish failed\n");
-                        return -1;
-                }
                 INFO("sts: Encryption established with master\n");
+                return 0;
         }
         return 0;
 }

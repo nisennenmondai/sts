@@ -30,7 +30,7 @@ int sts_ecdh_aes_test(void)
 
         /* test 1.0 */
         ret = mbedtls_ecdh_setup(&host_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
-        if (ret < 0) {
+        if (ret != 0) {
                 TESTS("test 1.0: mbedtls_ecdh_setup host FAILED!\n");
         } else {
                 count++;
@@ -38,7 +38,7 @@ int sts_ecdh_aes_test(void)
         }
         /* test 1.1 */
         ret = mbedtls_ecdh_setup(&remote_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
-        if (ret < 0) {
+        if (ret != 0) {
                 TESTS("test 1.1: mbedtls_ecdh_setup remote FAILED!\n");
         } else {
                 count++;
@@ -48,7 +48,7 @@ int sts_ecdh_aes_test(void)
         /* test 2.0 */
         ret = mbedtls_ecdh_gen_public(&host_ecdh_ctx.grp, &host_ecdh_ctx.d,
                         &host_ecdh_ctx.Q, sts_genrand, NULL);
-        if (ret < 0) {
+        if (ret != 0) {
                 TESTS("test 2.0: mbedtls_ecdh_gen_public host FAILED!\n");
         } else {
                 count++;
@@ -58,7 +58,7 @@ int sts_ecdh_aes_test(void)
         /* test 2.1 */
         ret = mbedtls_ecdh_gen_public(&remote_ecdh_ctx.grp, &remote_ecdh_ctx.d,
                         &remote_ecdh_ctx.Q, sts_genrand, NULL);
-        if (ret < 0) {
+        if (ret != 0) {
                 TESTS("test 2.1: mbedtls_ecdh_gen_public remote FAILED!\n");
         } else {
                 count++;
@@ -67,7 +67,7 @@ int sts_ecdh_aes_test(void)
 
         /* test 3.0 */
         ret = mbedtls_ecp_copy(&host_ecdh_ctx.Qp, &remote_ecdh_ctx.Q);
-        if (ret < 0) {
+        if (ret != 0) {
                 TESTS("test 3.0: mbedtls_ecp_copy host FAILED!\n");
         } else {
                 count++;
@@ -76,7 +76,7 @@ int sts_ecdh_aes_test(void)
 
         /* test 3.1 */
         ret = mbedtls_ecp_copy(&remote_ecdh_ctx.Qp, &host_ecdh_ctx.Q);
-        if (ret < 0) {
+        if (ret != 0) {
                 TESTS("test 3.1: mbedtls_ecp_copy remote FAILED!\n");
         } else {
                 count++;
@@ -86,7 +86,7 @@ int sts_ecdh_aes_test(void)
         /* test 4.0 */
         ret = mbedtls_ecdh_calc_secret(&host_ecdh_ctx, &olen, host_derived_key,
                         sizeof(host_derived_key), sts_genrand, NULL);
-        if (ret < 0) {
+        if (ret != 0) {
                 TESTS("test 4.0: mbedtls_ecdh_calc_secret host FAILED!\n");
         } else {
                 count++;
@@ -96,7 +96,7 @@ int sts_ecdh_aes_test(void)
         /* test 4.1 */
         ret = mbedtls_ecdh_calc_secret(&remote_ecdh_ctx, &olen, remote_derived_key,
                         sizeof(remote_derived_key), sts_genrand, NULL);
-        if (ret < 0) {
+        if (ret != 0) {
                 TESTS("test 4.1: mbedtls_ecdh_calc_secret remote FAILED!\n");
         } else {
                 count++;
@@ -106,7 +106,7 @@ int sts_ecdh_aes_test(void)
         /* test 5.0 */
         ret = sts_verify_derived_keylen(host_derived_key, sizeof(host_derived_key),
                         ECDH_SHARED_KEYSIZE_BITS);
-        if (ret < 0) {
+        if (ret != 0) {
                 TESTS("test 5.0: sts_verify_derived_keylen host FAILED!\n");
         } else {
                 count++;
@@ -116,7 +116,7 @@ int sts_ecdh_aes_test(void)
         /* test 5.1 */
         ret = sts_verify_derived_keylen(remote_derived_key,
                         sizeof(remote_derived_key), ECDH_SHARED_KEYSIZE_BITS);
-        if (ret < 0) {
+        if (ret != 0) {
                 TESTS("test 5.1: sts_verify_derived_keylen remote FAILED!\n");
         } else {
                 count++;
@@ -134,7 +134,7 @@ int sts_ecdh_aes_test(void)
         strcpy((char*)message, msg);
         ret = mbedtls_aes_setkey_enc(&host_aes_ctx, host_derived_key,
                         ECDH_SHARED_KEYSIZE_BITS);
-        if (ret < 0) {
+        if (ret != 0) {
                 TESTS("test 6.0: mbedtls_aes_setkey_enc host FAILED!\n");
         } else {
                 count++;
@@ -143,7 +143,7 @@ int sts_ecdh_aes_test(void)
         /* test 6.1 */
         ret = mbedtls_aes_setkey_dec(&remote_aes_ctx, remote_derived_key,
                         ECDH_SHARED_KEYSIZE_BITS);
-        if (ret < 0) {
+        if (ret != 0) {
                 TESTS("test 6.1: mbedtls_aes_setkey_enc remote FAILED!\n");
         } else {
                 count++;

@@ -50,22 +50,23 @@
 
 /* status */
 #define STS_STARTED 0
-#define STS_STOPPED 1
+#define STS_STOPPED 1 
 #define STS_KILL_THREAD 1
 
-/* sts message types */
-#define STS_AUTHREQ "AUTHREQ:"
-#define STS_AUTHACK "AUTHACK:"
-#define STS_RDYREQ  "RDYREQ:"
-#define STS_RDYACK  "RDYACK:"
+/* sts msg types */
+#define STS_AUTHREQ  "AUTHREQ:"
+#define STS_AUTHACK  "AUTHACK:"
+#define STS_RDYREQ   "RDYREQ:"
+#define STS_RDYACK   "RDYACK:"
 #define STS_HEADERSIZE 10
 #define STS_MSG_MAXLEN 1024
 
-/* sts conn status */
+/* sts protocole state */
 #define STS_STEP_0 0
 #define STS_STEP_1 1
 #define STS_STEP_2 2
 #define STS_STEP_3 3
+#define STS_STEP_4 4
 
 struct sts_message {
         char header[STS_HEADERSIZE]; /* max header length */

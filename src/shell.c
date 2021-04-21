@@ -47,7 +47,7 @@ int sts_start_session(char **argv)
         struct sts_context *ctx = sts_get_ctx();
         (void)argv;
         int ret = 0;
-        if (ctx->status == STS_STARTED || ctx->client.isconnected == 1) {
+        if (ctx->status == STS_STARTED) {
                 ERROR("sts: a session has already been started already\n");
                 return STS_PROMPT;
         }
@@ -202,7 +202,7 @@ int sts_status(char **argv)
         (void)argv;
         struct sts_context *ctx = sts_get_ctx();
 
-        if (ctx->client.isconnected == 0 && ctx->status == STS_STOPPED) {
+        if (ctx->status == STS_STOPPED) {
                 INFO("sts: status:          OFFLINE\n");
                 return STS_PROMPT;
         }

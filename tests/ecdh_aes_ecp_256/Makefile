@@ -1,6 +1,6 @@
 SRC_DIR += ../../src
 SRC_TST += ../ecdh_aes_ecp_256/ecdh_aes_ecp_256.c
-SRC_STS += $(filter-out $(SRC_DIR)/main.c, $(wildcard $(SRC_DIR)/*.c))
+SRC_STS += $(filter-out $(SRC_DIR)/shell.c, $(wildcard $(SRC_DIR)/*.c))
 
 CFLAGS += -Wall
 CFLAGS += -I../../include/
