@@ -30,6 +30,9 @@
 #define READBUFFSIZE              1024
 #define SENDBUFFSIZE              1024
 #define COMMAND_TIMEOUT_MS        10000
+
+/* config file */
+#define CONFIG_KEY_MAXLENGTH      16
 #define CONFIG_VALUE_MAXLENGTH    128
 
 /* shell */

@@ -21,7 +21,7 @@ int sts_genrand(void *rng_state, unsigned char *output, size_t len)
         mbedtls_entropy_init(&entropy);
 
         ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, 
-                        (const unsigned char *) "RANDOM_GEN", 16);
+                        (const unsigned char *) "RANDOM_GEN", 10);
 
         if (ret != 0) {
                 ERROR("mbedtls_ctr_drbg_seed()\n");
@@ -62,11 +62,10 @@ int sts_verify_derived_keylen(const unsigned char *buf, size_t size, size_t len)
         }
 }
 
-/* TODO temporary for debug */
 void sts_print_derived_key(const unsigned char *buf, size_t size) 
 {
         size_t i;
-        INFO("sts: shared_key: ");
+        DEBUG("sts: shared_key: ");
 
         for (i = 0 ; i < size; i++) {
                 if (buf[i] == '\0') {
