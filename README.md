@@ -11,7 +11,7 @@ Those 3 config files use a public MQTT broker, **THERE IS NO PRIVACY PROTECTION*
 - Broker: broker.emqx.io
 - TCP Port: 1883
 
-#### How to use
+#### HOWTO install
 - sudo ./buils.sh 
 - cd bin/
 - ./sts
@@ -27,6 +27,7 @@ Those 3 config files use a public MQTT broker, **THERE IS NO PRIVACY PROTECTION*
 
 ### TODO improve mqtt client
 - subscribe to multiple topics **0%**
+- implement keepalive **0%**
 
 ### TODO make beautiful documentation
 - howto **1%**

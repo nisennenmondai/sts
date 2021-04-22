@@ -120,14 +120,14 @@ static void _sts_handlers(struct sts_message *msg)
 
                 /* receive AUTHACK from master */
                 if (strcmp(msg->header, STS_AUTHACK) == 0 && 
-                                ctx.slave_flag ==  STS_STEP_1) {
+                                ctx.slave_flag == STS_STEP_1) {
                         INFO("sts: Received AUTHACK from master\n");
                         ctx.slave_flag = STS_STEP_2;
                 }
 
                 /* receive RDYREQ from master */
                 if (strcmp(msg->header, STS_RDYREQ) == 0 && 
-                                ctx.slave_flag ==  STS_STEP_2) {
+                                ctx.slave_flag == STS_STEP_2) {
                         char master_QX[MPI_STRING_SIZE];
                         char master_QY[MPI_STRING_SIZE];
 
@@ -135,12 +135,9 @@ static void _sts_handlers(struct sts_message *msg)
                         memset(master_QY, 0, sizeof(master_QY));
 
                         _sts_extract_pubkey(master_QX, master_QY, msg);
-
-                        /* copy X Y */
                         mbedtls_ecp_point_read_string(&ctx.host_ecdh_ctx.Qp, 16, 
                                         master_QX, master_QY);
 
-                        /* compute derived_key */
                         memset(ctx.derived_key, 0, sizeof(ctx.derived_key));
                         mbedtls_ecdh_calc_secret(&ctx.host_ecdh_ctx, &olen, 
                                         ctx.derived_key, sizeof(ctx.derived_key), 
@@ -152,7 +149,7 @@ static void _sts_handlers(struct sts_message *msg)
 
                 /* receive RDYACK from master */
                 if (strcmp(msg->header, STS_RDYACK) == 0 && 
-                                ctx.slave_flag ==  STS_STEP_3) {
+                                ctx.slave_flag == STS_STEP_3) {
                         INFO("sts: Received RDYACK from master\n");
                         ctx.slave_flag = STS_STEP_4;
                         return;
@@ -163,7 +160,7 @@ static void _sts_handlers(struct sts_message *msg)
         if (strcmp(ctx.sts_mode, "master") == 0) {
                 /* receive AUTHACK from slave */
                 if (strcmp(msg->header, STS_AUTHACK) == 0 && 
-                                ctx.master_flag ==  STS_STEP_0) {
+                                ctx.master_flag == STS_STEP_0) {
                         INFO("sts: Received AUTHACK from slave\n");
                         ctx.master_flag = STS_STEP_1;
                 }
@@ -193,7 +190,7 @@ static void _sts_handlers(struct sts_message *msg)
 
                 /* receive RDYREQ from slave */
                 if (strcmp(msg->header, STS_RDYREQ) == 0 && 
-                                ctx.master_flag ==  STS_STEP_3) {
+                                ctx.master_flag == STS_STEP_3) {
                         char slave_QX[MPI_STRING_SIZE];
                         char slave_QY[MPI_STRING_SIZE];
 
@@ -201,12 +198,9 @@ static void _sts_handlers(struct sts_message *msg)
                         memset(slave_QY, 0, sizeof(slave_QY));
 
                         _sts_extract_pubkey(slave_QX, slave_QY, msg);
-
-                        /* copy X Y */
                         mbedtls_ecp_point_read_string(&ctx.host_ecdh_ctx.Qp, 16, 
                                         slave_QX, slave_QY);
 
-                        /* compute derived_key */
                         memset(ctx.derived_key, 0, sizeof(ctx.derived_key));
                         mbedtls_ecdh_calc_secret(&ctx.host_ecdh_ctx, &olen, 
                                         ctx.derived_key, sizeof(ctx.derived_key), 
@@ -342,6 +336,7 @@ static void _mqtt_on_msg_recv(MessageData *data)
         memset(msg.data, 0, sizeof(msg.data));
         msg_inc = calloc((size_t)data->message->payloadlen + 1, sizeof(char));
         memcpy(msg_inc, data->message->payload, data->message->payloadlen);
+        INFO("[MQTT_INC]: %s\n", msg_inc);
 
         /* if encryption ON */
         if (strcmp(ctx.sts_mode, "master") == 0 || 
@@ -352,7 +347,6 @@ static void _mqtt_on_msg_recv(MessageData *data)
                 free(msg_inc);
                 return;
         }
-        INFO("[MQTT_INC]: %s\n", msg_inc);
         ctx.msg_recv++;
         free(msg_inc);
 }
@@ -485,7 +479,6 @@ int mqtt_publish(char *message)
 int sts_init_sec(void)
 {
         int ret = 0;
-        int count = 0;
         size_t olen = 0;
         char msg_out[STS_MSG_MAXLEN];
         char slave_QX[MPI_STRING_SIZE];
@@ -493,6 +486,8 @@ int sts_init_sec(void)
         char master_QX[MPI_STRING_SIZE];
         char master_QY[MPI_STRING_SIZE];
 
+        ctx.master_flag = STS_STEP_0;
+        ctx.slave_flag = STS_STEP_0;
         memset(msg_out, 0, sizeof(msg_out));
         memset(slave_QX, 0, sizeof(slave_QX));
         memset(slave_QY, 0, sizeof(slave_QY));
@@ -514,28 +509,21 @@ int sts_init_sec(void)
 
         /* MASTER SIDE */
         if (strcmp(ctx.sts_mode, "master") == 0) {
-                /* send AUTHREQ to slave 5 times every 5 sec &&
-                 * wait AUTHACK from slave */
+                /* send AUTHREQ to slave */
                 INFO("sts: Sending AUTHREQ to slave...\n");
-                while (ctx.master_flag == STS_STEP_0 && count < 5) {
-                        memset(msg_out, 0, sizeof(msg_out));
-                        sts_concatenate(msg_out, STS_AUTHREQ);
-                        sts_concatenate(msg_out, ctx.id_slave);
-                        ctx.no_print = 0;
-                        ret = mqtt_publish(msg_out);
-                        if (ret < 0) {
-                                ERROR("sts: publish failed\n");
-                                return -1;
-                        }
-                        count++;
-                        sleep(5);
-                        if (count == 5) {
-                                count = 0;
-                                ERROR("sts: Authentication request failed "
-                                                "after 5 attempts\n");
-                                return -1;
-                        }
+                memset(msg_out, 0, sizeof(msg_out));
+                sts_concatenate(msg_out, STS_AUTHREQ);
+                sts_concatenate(msg_out, ctx.id_slave);
+                ctx.no_print = 0;
+                ret = mqtt_publish(msg_out);
+                if (ret < 0) {
+                        ERROR("sts: publish failed\n");
+                        return -1;
                 }
+
+                /* wait AUTHACK from slave */
+                INFO("sts: Waiting AUTHACK from slave\n");
+                while (ctx.master_flag == STS_STEP_0) {};
 
                 /* wait AUTHREQ from slave */
                 INFO("sts: Waiting AUTHREQ from slave\n");
@@ -552,9 +540,6 @@ int sts_init_sec(void)
                         ERROR("sts: publish failed\n");
                         return -1;
                 }
-
-                /* give time to slave */
-                sleep(1);
 
                 /* send RDYREQ to slave */
                 INFO("sts: Sending RDYREQ to slave...\n");
@@ -618,9 +603,6 @@ int sts_init_sec(void)
                         return -1;
                 }
 
-                /* give time to master */
-                sleep(1);
-
                 /* send AUTHREQ to master */
                 INFO("sts: Sending AUTHREQ\n");
                 memset(msg_out, 0, sizeof(msg_out));
@@ -654,9 +636,6 @@ int sts_init_sec(void)
                         return -1;
                 }
 
-                /* give time to master */
-                sleep(1);
-
                 /* send RDYREQ */
                 INFO("sts: Sending RDYREQ to master\n");
                 mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.X, 16, slave_QX, 
@@ -664,6 +643,7 @@ int sts_init_sec(void)
                 mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.Y, 16, slave_QY, 
                                 MPI_STRING_SIZE, &olen);
                 memset(msg_out, 0, sizeof(msg_out));
+                sts_concatenate(msg_out, STS_RDYREQ);
                 sts_concatenate(msg_out, "X");
                 sts_concatenate(msg_out, slave_QX);
                 sts_concatenate(msg_out, "Y");
