@@ -8,7 +8,6 @@ pubtop   = s2m
 mqtt_version  = 4
 clientid      = test_slave
 clean_session = 1
-keep_alive    = 0
 is_retained   = 0
 sts_mode      = slave
 id_master     = sd#^$&*^jfh32if

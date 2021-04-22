@@ -253,8 +253,6 @@ static int _sts_load_config(const char *config)
                         strcpy(ctx.clientid, value);
                 } else if (strcmp(key, "clean_session") == 0) {
                         ctx.clean_session = atoi(value);
-                } else if (strcmp(key, "keep_alive") == 0) {
-                        ctx.keep_alive = atoi(value);
                 } else if (strcmp(key, "is_retained") == 0) {
                         ctx.is_retained = atoi(value);
                 } else if (strcmp(key, "sts_mode") == 0) {
@@ -306,7 +304,6 @@ void sts_reset_ctx(void)
         ctx.mqtt_version = 0;
         ctx.qos = 0;
         ctx.port = 0;
-        ctx.keep_alive = 0;
         ctx.clean_session = 0;
         ctx.is_retained = 0;
         ctx.no_print = 0;
@@ -390,7 +387,7 @@ int mqtt_connect(void)
         MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
         data.MQTTVersion = ctx.mqtt_version;
         data.clientID.cstring = ctx.clientid;
-        data.keepAliveInterval = ctx.keep_alive;
+        data.keepAliveInterval = 0;
         data.cleansession = ctx.clean_session;
         data.username.cstring = ctx.username;
         data.password.cstring = ctx.password;

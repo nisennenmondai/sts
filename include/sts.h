@@ -77,7 +77,6 @@ struct sts_context {
         unsigned int mqtt_version;
         unsigned int qos;
         unsigned int port;
-        unsigned int keep_alive;
         unsigned int clean_session;
         unsigned int is_retained;
         unsigned int msg_sent;
