@@ -14,6 +14,7 @@ static struct sts_context ctx = {
         .status      = STS_STOPPED,
         .master_flag = STS_STEP_0,
         .slave_flag  = STS_STEP_0,
+        .encryption  = 0,
 };
 
 static unsigned char sendbuff[SENDBUFFSIZE];
@@ -121,6 +122,20 @@ static int _sts_compute_shared_secret(char *master_QX, char *master_QY)
                         sizeof(ctx.derived_key), 256);
         if (ret != 0) {
                 ERROR("sts: sts_verify_derived_keylen()\n");
+                return -1;
+        }
+
+        ret = mbedtls_aes_setkey_enc(&ctx.host_aes_ctx_enc, ctx.derived_key,
+                        ECDH_SHARED_KEYSIZE_BITS);
+        if (ret != 0) {
+                ERROR("sts: mbedtls_aes_setkey_enc()\n");
+                return -1;
+        }
+
+        ret = mbedtls_aes_setkey_dec(&ctx.host_aes_ctx_dec, ctx.derived_key,
+                        ECDH_SHARED_KEYSIZE_BITS);
+        if (ret != 0) {
+                ERROR("sts: mbedtls_aes_setkey_dec()\n");
                 return -1;
         }
         return 0;
@@ -333,6 +348,7 @@ void sts_reset_ctx(void)
         ctx.msg_sent = 0;
         ctx.msg_recv = 0;
         ctx.thrd_msg_type = 0;
+        ctx.encryption = 0;
         ctx.status = STS_STOPPED;
         ctx.master_flag = STS_STEP_0;
         ctx.slave_flag = STS_STEP_0;
@@ -365,11 +381,22 @@ static void _mqtt_on_msg_recv(MessageData *data)
         msg_inc = calloc((size_t)data->message->payloadlen + 1, sizeof(char));
         memcpy(msg_inc, data->message->payload, data->message->payloadlen);
 
-        /* if encryption ON */
+        /* if security mode */
         if (strcmp(ctx.sts_mode, "master") == 0 || 
                         strcmp(ctx.sts_mode, "slave") == 0) {
                 _sts_parse_msg(msg_inc, &msg);
                 _sts_handlers(&msg);
+                if (ctx.encryption == 1) {
+                        unsigned char dec[STS_MSG_MAXLEN];
+                        unsigned char buf[STS_MSG_MAXLEN];
+                        memset(dec, 0, sizeof(dec));
+                        memset(buf, 0, sizeof(buf));
+
+                        strcpy((char*)buf, msg_inc);
+                        sts_decrypt_aes_ecb(&ctx.host_aes_ctx_dec, buf, dec, 
+                                        sizeof(buf));
+                        INFO("[MQTT_INC]: %s\n", dec);
+                }
                 ctx.msg_recv++;
                 free(msg_inc);
                 return;
@@ -390,7 +417,6 @@ static void *_mqtt_yield(void *argv)
                         INFO("sts: stopping mqttyield thread...\n");
                         INFO("sts: terminating sts client...\n");
                         ctx.thrd_msg_type = 0;
-                        ctx.status = STS_STOPPED;
                         return NULL;
                 }
                 if ((ret = MQTTYield(&ctx.client, 1000)) != 0) {
@@ -430,7 +456,7 @@ int mqtt_connect(void)
         return 0;
 }
 
-void mqtt_disconnect(void)
+int mqtt_disconnect(void)
 {
         int ret = 0;
 
@@ -440,10 +466,11 @@ void mqtt_disconnect(void)
                                 "forcing network disconnection\n");
                 NetworkDisconnect(&ctx.network);
                 INFO("sts: disconnected from broker\n");
-                return;
+                return ret;
         }
         NetworkDisconnect(&ctx.network);
         INFO("sts: disconnected from broker\n");
+        return 0;
 }
 
 int mqtt_subscribe(void)
@@ -522,6 +549,8 @@ int sts_init_sec(void)
         memset(master_QX, 0, sizeof(master_QX));
         memset(master_QY, 0, sizeof(master_QY));
 
+        mbedtls_aes_init(&ctx.host_aes_ctx_dec);
+        mbedtls_aes_init(&ctx.host_aes_ctx_enc);
         mbedtls_ecdh_init(&ctx.host_ecdh_ctx);
         ret = mbedtls_ecdh_setup(&ctx.host_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
         if (ret != 0) {
@@ -574,14 +603,14 @@ int sts_init_sec(void)
                 /* send RDYREQ to slave */
                 DEBUG("sts: Sending RDYREQ to slave...\n");
                 memset(msg_out, 0, sizeof(msg_out));
-                ret = mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.X, 16, master_QX, 
-                                MPI_STRING_SIZE, &olen);
+                ret = mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.X, 16, 
+                                master_QX, MPI_STRING_SIZE, &olen);
                 if (ret != 0) {
                         ERROR("sts: mbedtls_mpi_write_string()\n");
                         return -1;
                 }
-                ret = mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.Y, 16, master_QY, 
-                                MPI_STRING_SIZE, &olen);
+                ret = mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.Y, 16, 
+                                master_QY, MPI_STRING_SIZE, &olen);
                 if (ret != 0) {
                         ERROR("sts: mbedtls_mpi_write_string()\n");
                         return -1;
@@ -619,6 +648,7 @@ int sts_init_sec(void)
                         return -1;
                 }
 
+                ctx.encryption = 1;
                 INFO("sts: Encryption established with slave\n");
                 return 0;
         }
@@ -676,14 +706,14 @@ int sts_init_sec(void)
 
                 /* send RDYREQ */
                 DEBUG("sts: Sending RDYREQ to master\n");
-                ret = mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.X, 16, slave_QX, 
-                                MPI_STRING_SIZE, &olen);
+                ret = mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.X, 16, 
+                                slave_QX, MPI_STRING_SIZE, &olen);
                 if (ret != 0) {
                         ERROR("sts: mbedtls_mpi_write_string()\n");
                         return -1;
                 }
-                mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.Y, 16, slave_QY, 
-                                MPI_STRING_SIZE, &olen);
+                mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.Y, 16, 
+                                slave_QY, MPI_STRING_SIZE, &olen);
                 if (ret != 0) {
                         ERROR("sts: mbedtls_mpi_write_string()\n");
                         return -1;
@@ -706,6 +736,7 @@ int sts_init_sec(void)
                 DEBUG("sts: Waiting RDYACK from master\n");
                 while (ctx.slave_flag == STS_STEP_3) {};
 
+                ctx.encryption = 1;
                 INFO("sts: Encryption established with master\n");
                 return 0;
         }
@@ -714,5 +745,7 @@ int sts_init_sec(void)
 
 void sts_free_sec(void)
 {
+        mbedtls_aes_free(&ctx.host_aes_ctx_dec);
+        mbedtls_aes_free(&ctx.host_aes_ctx_enc);
         mbedtls_ecdh_free(&ctx.host_ecdh_ctx);
 }

@@ -1,12 +1,12 @@
 ip   = 52.36.58.151
 port = 1883
 qos  = 0
-username = nosec
-password = nosec
+username = nosec_2
+password = nosec_2
 subtop   = nisennenmondai
 pubtop   = nisennenmondai
 mqtt_version  = 4
-clientid      = test_nosec
+clientid      = test_nosec_2
 clean_session = 1
 is_retained   = 0
 sts_mode      = nosec

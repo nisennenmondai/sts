@@ -14,6 +14,7 @@ static char *builtin_cmd[] = {
         "stop",
         "status",
         "send",
+        "sendenc",
 };
 
 static char *builtin_cmd_desc[] = {
@@ -24,6 +25,7 @@ static char *builtin_cmd_desc[] = {
         "                  example: 'send blah1 blah2 blah3'          |\n| "
                 "status            display status of current session          |",
         "send [MSG]        send a message to the broker               |",
+        "sendenc [MSG]     send a message with encryption             |",
 };
 
 static int (*builtin_func[]) (char **argv) = {
@@ -33,10 +35,22 @@ static int (*builtin_func[]) (char **argv) = {
         &sts_stop_session,
         &sts_status,
         &sts_send,
+        &sts_sendenc,
 };
 
 static int sts_num_builtins(void) {
         return sizeof(builtin_cmd) / sizeof(char *);
+}
+
+static void _ctrl_c_handler(int arg)
+{
+        struct sts_context *ctx = sts_get_ctx();
+        (void)arg;
+        INFO("sts: SIGINT Ctrl-C\n");
+        if (ctx->status == STS_STARTED) {
+                sts_stop_session(NULL);
+        }
+        exit(0);
 }
 
 static void sts_welcome(void)
@@ -282,6 +296,62 @@ int sts_stop_session(char **argv)
         return STS_PROMPT;
 }
 
+int sts_sendenc(char **message)
+{
+        size_t i = 1;
+        size_t size = 0;
+        char buf[STS_MSG_MAXLEN];
+        unsigned char msg[STS_MSG_MAXLEN];
+        unsigned char enc[STS_MSG_MAXLEN];
+        unsigned char dec[STS_MSG_MAXLEN];
+        struct sts_context *ctx = sts_get_ctx();
+
+        memset(msg, 0, sizeof(msg));
+        memset(enc, 0, sizeof(enc));
+        memset(dec, 0, sizeof(dec));
+        memset(buf, 0, sizeof(buf));
+
+        if (ctx->status == STS_STOPPED) {
+                ERROR("sts: session not started\n");
+                return STS_PROMPT;
+        }
+
+        if(ctx->encryption != 1) {
+                ERROR("sts: no encryption with slave||master established\n");
+                return STS_PROMPT;
+        }
+
+        if (message[1] == NULL) {
+                ERROR("sts: missing param -> 'sendenc [MSG]'\n");
+                return STS_PROMPT;
+        }
+
+        /* compute size of msg */
+        while (message[i] != NULL) {
+                size += strlen(message[i] + 1);
+                i++;
+        }
+
+        if (size > STS_MSG_MAXLEN) {
+                ERROR("sts: message too big, size <= %d\n", STS_MSG_MAXLEN);
+                return STS_PROMPT;
+        }
+
+        /* copy */
+        i = 1;
+        while (message[i] != NULL) {
+                sts_concatenate(buf, message[i]);
+                sts_concatenate(buf, " ");
+                i++;
+        }
+
+        strcpy((char*)msg, buf);
+        size = strlen((char*)msg);
+
+        mqtt_publish((char*)enc);
+        return STS_PROMPT;
+}
+
 int sts_send(char **message)
 {
         int ret = 0;
@@ -292,24 +362,24 @@ int sts_send(char **message)
         memset(msg_out, 0, sizeof(msg_out));
         struct sts_context *ctx = sts_get_ctx();
 
-        /* compute size of msg */
-        while (message[i] != NULL) {
-                msg_size += strlen(message[i] + 1);
-                i++;
-        }
-
         if (ctx->status == STS_STOPPED) {
                 ERROR("sts: session not started\n");
                 return STS_PROMPT;
         }
 
         if (message[1] == NULL) {
-                ERROR("sts: missing param -> 'sendtest [MSG]'\n");
+                ERROR("sts: missing param -> 'send [MSG]'\n");
                 return STS_PROMPT;
         }
 
+        /* compute size of msg */
+        while (message[i] != NULL) {
+                msg_size += strlen(message[i] + 1);
+                i++;
+        }
+
         if (msg_size > STS_MSG_MAXLEN) {
-                ERROR("sts: message is too big, size <= %d\n", STS_MSG_MAXLEN);
+                ERROR("sts: message too big, size <= %d\n", STS_MSG_MAXLEN);
                 return STS_PROMPT;
         }
 
@@ -365,12 +435,17 @@ int sts_status(char **argv)
         INFO("sts: sub_topic:       %s\n", ctx->topic_sub);
         INFO("sts: msg sent:        %u\n", ctx->msg_sent);
         INFO("sts: msg recv:        %u\n", ctx->msg_recv);
-        if (strcmp(ctx->sts_mode, "master") == 0) {
-                sts_print_derived_key(ctx->derived_key, sizeof(ctx->derived_key));
 
-        }
-        if (strcmp(ctx->sts_mode, "slave") == 0) {
-                sts_print_derived_key(ctx->derived_key, sizeof(ctx->derived_key));
+        if (ctx->encryption == 1) {
+                INFO("sts: encryption:      YES\n");
+                if (strcmp(ctx->sts_mode, "master") == 0) {
+                        sts_print_derived_key(ctx->derived_key, 
+                                        sizeof(ctx->derived_key));
+                }
+                if (strcmp(ctx->sts_mode, "slave") == 0) {
+                        sts_print_derived_key(ctx->derived_key, 
+                                        sizeof(ctx->derived_key));
+                }
         }
         return STS_PROMPT;
 }
@@ -399,11 +474,12 @@ int sts_exit(char **argv)
 
 int main(void)
 {
+        signal(SIGINT, _ctrl_c_handler);
         sts_welcome();
         sts_loop();
         return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-/* IMPLEMENT YOUR FUNCTIONS HERE  -- read_captor_x() ... */
+/* IMPLEMENT YOUR FUNCTIONS HERE  -- read_sensor_x() ... */
 ////////////////////////////////////////////////////////////////////////////////

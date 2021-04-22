@@ -89,6 +89,7 @@ struct sts_context {
         unsigned short master_flag;
         unsigned short slave_flag;
         unsigned short no_print;
+        unsigned short encryption;
         unsigned char derived_key[ECDH_SHARED_KEYSIZE_BYTES];
         char topic_sub[CONFIG_VALUE_MAXLENGTH];
         char topic_pub[CONFIG_VALUE_MAXLENGTH];
@@ -101,14 +102,16 @@ struct sts_context {
         char ip[16];
         Network network;
         MQTTClient client;
+        mbedtls_aes_context host_aes_ctx_enc;
+        mbedtls_aes_context host_aes_ctx_dec;
         mbedtls_ecdh_context host_ecdh_ctx;
 };
 
 /* mqtt */
-void mqtt_disconnect(void);
 int mqtt_connect(void);
-int mqtt_unsubscribe(void);
+int mqtt_disconnect(void);
 int mqtt_subscribe(void);
+int mqtt_unsubscribe(void);
 int mqtt_publish(char *message);
 
 /* sts */
@@ -125,6 +128,7 @@ int sts_start_session(char **argv);
 int sts_stop_session(char **argv);
 int sts_send(char **argv);
 int sts_status(char **argv);
+int sts_sendenc(char **argv);
 
 /* security */
 void sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
