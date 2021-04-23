@@ -419,34 +419,38 @@ int sts_status(char **argv)
                 return STS_PROMPT;
         }
 
-        INFO("sts: status:          ONLINE\n");
-        INFO("sts: id_master:       %s\n", ctx->id_master);
-        INFO("sts: id_slave:        %s\n", ctx->id_slave);
-        INFO("sts: sts_mode:        %s\n", ctx->sts_mode);
-        INFO("sts: mqtt version:    %u\n", ctx->mqtt_version);
-        INFO("sts: broker_ip:       %s\n", ctx->ip);
-        INFO("sts: broker_port:     %u\n", ctx->port);
-        INFO("sts: client_id:       %s\n", ctx->clientid);
-        INFO("sts: username:        %s\n", ctx->username);
-        INFO("sts: password:        %s\n", ctx->password);
-        INFO("sts: qos:             %u\n", ctx->qos);
-        INFO("sts: clean_session:   %u\n", ctx->clean_session);
-        INFO("sts: is_retained      %u\n", ctx->is_retained);
-        INFO("sts: pub_topic:       %s\n", ctx->topic_pub);
-        INFO("sts: sub_topic:       %s\n", ctx->topic_sub);
-        INFO("sts: msg sent:        %u\n", ctx->msg_sent);
-        INFO("sts: msg recv:        %u\n", ctx->msg_recv);
+        INFO("sts: status:            ONLINE\n");
+        INFO("sts: +==========================================+\n");
+        INFO("sts: | MQTT                                     |\n");
+        INFO("sts: +==========================================+\n");
+        INFO("sts: | mqtt version:    %u\n", ctx->mqtt_version);
+        INFO("sts: | broker_ip:       %s\n", ctx->ip);
+        INFO("sts: | broker_port:     %u\n", ctx->port);
+        INFO("sts: | username:        %s\n", ctx->username);
+        INFO("sts: | password:        %s\n", ctx->password);
+        INFO("sts: | sub_topic:       %s\n", ctx->topic_sub);
+        INFO("sts: | pub_topic:       %s\n", ctx->topic_pub);
+        INFO("sts: | qos:             %u\n", ctx->qos);
+        INFO("sts: | client_id:       %s\n", ctx->clientid);
+        INFO("sts: | clean_session:   %u\n", ctx->clean_session);
+        INFO("sts: | is_retained      %u\n", ctx->is_retained);
+        INFO("sts: +==========================================+\n");
+        INFO("sts: | STS                                      |\n");
+        INFO("sts: +==========================================+\n");
+        INFO("sts: | sts_mode:        %s\n", ctx->sts_mode);
+        INFO("sts: | id_master:       %s\n", ctx->id_master);
+        INFO("sts: | id_slave:        %s\n", ctx->id_slave);
+        INFO("sts: | msg sent:        %u\n", ctx->msg_sent);
+        INFO("sts: | msg recv:        %u\n", ctx->msg_recv);
 
         if (ctx->encryption == 1) {
-                INFO("sts: encryption:      YES\n");
-                if (strcmp(ctx->sts_mode, "master") == 0) {
-                        sts_print_derived_key(ctx->derived_key, 
-                                        sizeof(ctx->derived_key));
-                }
-                if (strcmp(ctx->sts_mode, "slave") == 0) {
-                        sts_print_derived_key(ctx->derived_key, 
-                                        sizeof(ctx->derived_key));
-                }
+                INFO("sts: +==========================================+\n");
+                INFO("sts: | ENCRYPTION                               |\n");
+                INFO("sts: +==========================================+\n");
+                INFO("sts: | key agreement protocole: ECDH\n");
+                INFO("sts: | elliptic curve:          SECP256K1\n");
+                INFO("sts: | encryption:              AES-ECB-256\n");
+                INFO("sts: +==========================================+\n");
         }
         return STS_PROMPT;
 }

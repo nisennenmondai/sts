@@ -65,7 +65,6 @@ int sts_verify_derived_keylen(const unsigned char *buf, size_t size, size_t len)
 void sts_print_derived_key(const unsigned char *buf, size_t size) 
 {
         size_t i;
-        DEBUG("sts: shared_key: ");
 
         for (i = 0 ; i < size; i++) {
                 if (buf[i] == '\0') {

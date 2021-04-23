@@ -1,14 +1,14 @@
+mqtt_version  = 4
 ip   = 52.36.58.151
 port = 1883
-qos  = 0
 username = master
 password = master
 subtop   = s2m
 pubtop   = m2s
-mqtt_version  = 4
+qos  = 0
 clientid      = test_master
-clean_session = 1
 is_retained   = 0
+clean_session = 1
 sts_mode      = master
 id_master     = sd#^$&*^jfh32if
 id_slave      = d$fm%d5-#_-mfls

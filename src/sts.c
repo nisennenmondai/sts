@@ -150,7 +150,7 @@ static void _sts_handlers(struct sts_message *msg)
                 /* receive AUTHREQ from master*/
                 if (strcmp(msg->header, STS_AUTHREQ) == 0 && 
                                 ctx.slave_flag == STS_STEP_0) {
-                        DEBUG("sts: Received AUTHREQ from master\n");
+                        TRACE("sts: Received AUTHREQ from master\n");
                         if (strcmp(msg->data, ctx.id_slave) == 0) {
                                 INFO("sts: Authentication SUCCESS\n");
                                 ctx.slave_flag = STS_STEP_1;
@@ -166,7 +166,7 @@ static void _sts_handlers(struct sts_message *msg)
                 /* receive AUTHACK from master */
                 if (strcmp(msg->header, STS_AUTHACK) == 0 && 
                                 ctx.slave_flag == STS_STEP_1) {
-                        DEBUG("sts: Received AUTHACK from master\n");
+                        TRACE("sts: Received AUTHACK from master\n");
                         ctx.slave_flag = STS_STEP_2;
                 }
 
@@ -186,7 +186,7 @@ static void _sts_handlers(struct sts_message *msg)
                                 return;
                         }
 
-                        DEBUG("sts: Received RDYREQ from master\n");
+                        TRACE("sts: Received RDYREQ from master\n");
                         ctx.slave_flag = STS_STEP_3;
                         return;
                 }
@@ -194,7 +194,7 @@ static void _sts_handlers(struct sts_message *msg)
                 /* receive RDYACK from master */
                 if (strcmp(msg->header, STS_RDYACK) == 0 && 
                                 ctx.slave_flag == STS_STEP_3) {
-                        DEBUG("sts: Received RDYACK from master\n");
+                        TRACE("sts: Received RDYACK from master\n");
                         ctx.slave_flag = STS_STEP_4;
                         return;
                 }
@@ -205,16 +205,16 @@ static void _sts_handlers(struct sts_message *msg)
                 /* receive AUTHACK from slave */
                 if (strcmp(msg->header, STS_AUTHACK) == 0 && 
                                 ctx.master_flag == STS_STEP_0) {
-                        DEBUG("sts: Received AUTHACK from slave\n");
+                        TRACE("sts: Received AUTHACK from slave\n");
                         ctx.master_flag = STS_STEP_1;
                 }
 
                 /* receive AUTHREQ from slave */
                 if (strcmp(msg->header, STS_AUTHREQ) == 0 && 
                                 ctx.master_flag == STS_STEP_1) {
-                        DEBUG("sts: Received AUTHREQ from slave\n");
+                        TRACE("sts: Received AUTHREQ from slave\n");
                         if (strcmp(msg->data, ctx.id_master) == 0) {
-                                INFO("sts: Authentication success\n");
+                                INFO("sts: Authentication SUCCESS\n");
                                 ctx.master_flag = STS_STEP_2;
                                 return;
 
@@ -228,7 +228,7 @@ static void _sts_handlers(struct sts_message *msg)
                 /* receive RDYACK from slave */
                 if (strcmp(msg->header, STS_RDYACK) == 0 && 
                                 ctx.master_flag == STS_STEP_2) {
-                        DEBUG("sts: Received RDYACK from slave\n");
+                        TRACE("sts: Received RDYACK from slave\n");
                         ctx.master_flag = STS_STEP_3;
                         return;
                 }
@@ -249,7 +249,7 @@ static void _sts_handlers(struct sts_message *msg)
                                 return;
                         }
 
-                        DEBUG("sts: Received RDYREQ from slave\n");
+                        TRACE("sts: Received RDYREQ from slave\n");
                         ctx.master_flag = STS_STEP_4;
                         return;
                 }
@@ -569,7 +569,7 @@ int sts_init_sec(void)
         /* MASTER SIDE */
         if (strcmp(ctx.sts_mode, "master") == 0) {
                 /* send AUTHREQ to slave */
-                DEBUG("sts: Sending AUTHREQ to slave...\n");
+                TRACE("sts: Sending AUTHREQ to slave...\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 sts_concatenate(msg_out, STS_AUTHREQ);
                 sts_concatenate(msg_out, ctx.id_slave);
@@ -581,15 +581,15 @@ int sts_init_sec(void)
                 }
 
                 /* wait AUTHACK from slave */
-                DEBUG("sts: Waiting AUTHACK from slave\n");
+                TRACE("sts: Waiting AUTHACK from slave\n");
                 while (ctx.master_flag == STS_STEP_0) {};
 
                 /* wait AUTHREQ from slave */
-                DEBUG("sts: Waiting AUTHREQ from slave\n");
+                TRACE("sts: Waiting AUTHREQ from slave\n");
                 while (ctx.master_flag == STS_STEP_1) {};
 
                 /* send AUTHACK to slave */
-                DEBUG("sts: Sending AUTHACK to slave...\n");
+                TRACE("sts: Sending AUTHACK to slave...\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 sts_concatenate(msg_out, STS_AUTHACK);
 
@@ -601,7 +601,7 @@ int sts_init_sec(void)
                 }
 
                 /* send RDYREQ to slave */
-                DEBUG("sts: Sending RDYREQ to slave...\n");
+                TRACE("sts: Sending RDYREQ to slave...\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 ret = mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.X, 16, 
                                 master_QX, MPI_STRING_SIZE, &olen);
@@ -629,15 +629,15 @@ int sts_init_sec(void)
                 }
 
                 /* wait RDYACK from slave */
-                DEBUG("sts: Waiting RDYACK from slave\n");
+                TRACE("sts: Waiting RDYACK from slave\n");
                 while (ctx.master_flag == STS_STEP_2) {};
 
                 /* wait RDYREQ from slave */
-                DEBUG("sts: Waiting RDYREQ from slave\n");
+                TRACE("sts: Waiting RDYREQ from slave\n");
                 while (ctx.master_flag == STS_STEP_3) {};
 
                 /* send RDYACK to slave */
-                DEBUG("sts: Sending RDYACK to slave\n");
+                TRACE("sts: Sending RDYACK to slave\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 sts_concatenate(msg_out, STS_RDYACK);
 
@@ -656,11 +656,11 @@ int sts_init_sec(void)
         /* SLAVE SIDE */
         if (strcmp(ctx.sts_mode, "slave") == 0) {
                 /* wait AUTHREQ from master */
-                DEBUG("sts: Waiting AUTHREQ from master\n");
+                TRACE("sts: Waiting AUTHREQ from master\n");
                 while (ctx.slave_flag == STS_STEP_0) {};
 
                 /* send AUTHACK to master */
-                DEBUG("sts: Sending AUTHACK to master\n");
+                TRACE("sts: Sending AUTHACK to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 sts_concatenate(msg_out, STS_AUTHACK);
                 ctx.no_print = 1;
@@ -672,7 +672,7 @@ int sts_init_sec(void)
                 }
 
                 /* send AUTHREQ to master */
-                DEBUG("sts: Sending AUTHREQ\n");
+                TRACE("sts: Sending AUTHREQ to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 sts_concatenate(msg_out, STS_AUTHREQ);
                 sts_concatenate(msg_out, ctx.id_master);
@@ -685,15 +685,15 @@ int sts_init_sec(void)
                 }
 
                 /* wait AUTHACK from master */
-                DEBUG("sts: Waiting AUTHACK from master\n");
+                TRACE("sts: Waiting AUTHACK from master\n");
                 while (ctx.slave_flag == STS_STEP_1) {};
 
                 /* wait RDYREQ from master */
-                DEBUG("sts: Waiting RDYREQ from master\n");
+                TRACE("sts: Waiting RDYREQ from master\n");
                 while (ctx.slave_flag == STS_STEP_2) {};
 
                 /* send RDYACK to master */
-                DEBUG("sts: Sending RDYACK to master\n");
+                TRACE("sts: Sending RDYACK to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 sts_concatenate(msg_out, STS_RDYACK);
                 ctx.no_print = 1;
@@ -705,14 +705,14 @@ int sts_init_sec(void)
                 }
 
                 /* send RDYREQ */
-                DEBUG("sts: Sending RDYREQ to master\n");
+                TRACE("sts: Sending RDYREQ to master\n");
                 ret = mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.X, 16, 
                                 slave_QX, MPI_STRING_SIZE, &olen);
                 if (ret != 0) {
                         ERROR("sts: mbedtls_mpi_write_string()\n");
                         return -1;
                 }
-                mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.Y, 16, 
+                ret = mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.Y, 16, 
                                 slave_QY, MPI_STRING_SIZE, &olen);
                 if (ret != 0) {
                         ERROR("sts: mbedtls_mpi_write_string()\n");
@@ -733,9 +733,11 @@ int sts_init_sec(void)
                 }
 
                 /* wait RDYACK from master */
-                DEBUG("sts: Waiting RDYACK from master\n");
+                TRACE("sts: Waiting RDYACK from master\n");
                 while (ctx.slave_flag == STS_STEP_3) {};
 
+                /* wait for master to finish */
+                sleep(1);
                 ctx.encryption = 1;
                 INFO("sts: Encryption established with master\n");
                 return 0;
@@ -745,7 +747,7 @@ int sts_init_sec(void)
 
 void sts_free_sec(void)
 {
-        mbedtls_aes_free(&ctx.host_aes_ctx_dec);
         mbedtls_aes_free(&ctx.host_aes_ctx_enc);
+        mbedtls_aes_free(&ctx.host_aes_ctx_dec);
         mbedtls_ecdh_free(&ctx.host_ecdh_ctx);
 }
