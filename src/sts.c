@@ -165,7 +165,8 @@ static void _sts_handlers(struct sts_message *msg)
 
                 /* receive AUTHACK from master */
                 if (strcmp(msg->header, STS_AUTHACK) == 0 && 
-                                ctx.slave_flag == STS_STEP_1 && msg->data[0] == '\0') {
+                                ctx.slave_flag == STS_STEP_1 && 
+                                msg->data[0] == '\0') {
                         TRACE("sts: Received AUTHACK from master\n");
                         ctx.slave_flag = STS_STEP_2;
                 }
@@ -193,7 +194,8 @@ static void _sts_handlers(struct sts_message *msg)
 
                 /* receive RDYACK from master */
                 if (strcmp(msg->header, STS_RDYACK) == 0 && 
-                                ctx.slave_flag == STS_STEP_3 && msg->data[0] == '\0') {
+                                ctx.slave_flag == STS_STEP_3 && 
+                                msg->data[0] == '\0') {
                         TRACE("sts: Received RDYACK from master\n");
                         ctx.slave_flag = STS_STEP_4;
                         return;
@@ -204,7 +206,8 @@ static void _sts_handlers(struct sts_message *msg)
         if (strcmp(ctx.sts_mode, "master") == 0) {
                 /* receive AUTHACK from slave */
                 if (strcmp(msg->header, STS_AUTHACK) == 0 && 
-                                ctx.master_flag == STS_STEP_0 && msg->data[0] == '\0') {
+                                ctx.master_flag == STS_STEP_0 && 
+                                msg->data[0] == '\0') {
                         TRACE("sts: Received AUTHACK from slave\n");
                         ctx.master_flag = STS_STEP_1;
                 }
@@ -227,7 +230,8 @@ static void _sts_handlers(struct sts_message *msg)
 
                 /* receive RDYACK from slave */
                 if (strcmp(msg->header, STS_RDYACK) == 0 && 
-                                ctx.master_flag == STS_STEP_2 && msg->data[0] == '\0') {
+                                ctx.master_flag == STS_STEP_2 && 
+                                msg->data[0] == '\0') {
                         TRACE("sts: Received RDYACK from slave\n");
                         ctx.master_flag = STS_STEP_3;
                         return;
