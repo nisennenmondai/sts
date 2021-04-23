@@ -455,6 +455,8 @@ int sts_status(char **argv)
                 INFO("sts: | elliptic curve:          SECP256K1\n");
                 INFO("sts: | encryption:              AES-ECB-256\n");
                 INFO("sts: +==========================================+\n");
+        } else {
+                INFO("sts: +==========================================+\n");
         }
         return STS_PROMPT;
 }
