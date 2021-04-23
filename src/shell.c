@@ -347,6 +347,7 @@ int sts_sendenc(char **message)
 
         strcpy((char*)msg, buf);
         size = strlen((char*)msg);
+        sts_encrypt_aes_ecb(&ctx->host_aes_ctx_enc, msg, enc, size);
 
         mqtt_publish((char*)enc);
         return STS_PROMPT;

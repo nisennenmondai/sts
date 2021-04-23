@@ -34,8 +34,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <time.h>
-#include <sys/time.h>
 #include <math.h>
+#include <sys/time.h>
 
 #define FMT_INFO  " - [INFO]  # "
 #define FMT_WARN  " - [WARN]  # "
@@ -56,26 +56,10 @@
 #define BUFFSIZE 25
 #define MSSIZE   7
 
-static void concatenate(char p[], char q[]) {
-        int c;
-        int d;
-        c = 0;
-
-        while (p[c] != '\0') {
-                c++;
-        }
-        d = 0;
-
-        while (q[d] != '\0') {
-                p[c] = q[d];
-                d++;
-                c++;
-        }
-        p[c] = '\0';
-}
-
 static void print(const char *message, ...)
 {
+        int c;
+        int d;
         char buffer[BUFFSIZE];
         char ms[MSSIZE];
         unsigned int millisec;
@@ -98,7 +82,19 @@ static void print(const char *message, ...)
         sprintf(ms, "%03d", millisec);
         strftime(buffer, 25, "%Y-%m-%d %H:%M:%S.", tm_info);
 
-        concatenate(buffer, ms);
+        c = 0;
+
+        while (buffer[c] != '\0') {
+                c++;
+        }
+        d = 0;
+
+        while (ms[d] != '\0') {
+                buffer[c] = ms[d];
+                d++;
+                c++;
+        }
+        buffer[c] = '\0';
         printf("%s", buffer);
 
         vprintf(message, args);
