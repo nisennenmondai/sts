@@ -298,6 +298,7 @@ int sts_stop_session(char **argv)
 
 int sts_sendenc(char **message)
 {
+        int ret;
         size_t i = 1;
         size_t size = 0;
         char buf[STS_MSG_MAXLEN];
@@ -349,7 +350,11 @@ int sts_sendenc(char **message)
         size = strlen((char*)msg);
         sts_encrypt_aes_ecb(&ctx->host_aes_ctx_enc, msg, enc, size);
 
-        mqtt_publish((char*)enc);
+        ret = mqtt_publish((char*)enc);
+        if (ret < 0) {
+                ERROR("sts: mqtt_publish()\n");
+                return STS_PROMPT;
+        }
         return STS_PROMPT;
 }
 
