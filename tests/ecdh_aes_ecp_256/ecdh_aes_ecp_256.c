@@ -1,7 +1,7 @@
 #include "sts.h"
 #include "log.h"
 
-#define NUMBER_TESTS 13
+#define NUMBER_TESTS 11
 
 int sts_ecdh_aes_test(void)
 {
@@ -104,26 +104,6 @@ int sts_ecdh_aes_test(void)
         }
 
         /* test 5.0 */
-        ret = sts_verify_derived_keylen(host_derived_key, sizeof(host_derived_key),
-                        ECDH_SHARED_KEYSIZE_BITS);
-        if (ret != 0) {
-                TESTS("test 5.0: sts_verify_derived_keylen host FAILED!\n");
-        } else {
-                count++;
-                TESTS("test 5.0: sts_verify_derived_keylen host OK!\n");
-        }
-
-        /* test 5.1 */
-        ret = sts_verify_derived_keylen(remote_derived_key,
-                        sizeof(remote_derived_key), ECDH_SHARED_KEYSIZE_BITS);
-        if (ret != 0) {
-                TESTS("test 5.1: sts_verify_derived_keylen remote FAILED!\n");
-        } else {
-                count++;
-                TESTS("test 5.1: sts_verify_derived_keylen remote OK!\n");
-        }
-
-        /* test 6.0 */
         mbedtls_aes_init(&host_aes_ctx);
         mbedtls_aes_init(&remote_aes_ctx);
         memset(message, 0, STS_MSG_MAXLEN);
@@ -135,31 +115,31 @@ int sts_ecdh_aes_test(void)
         ret = mbedtls_aes_setkey_enc(&host_aes_ctx, host_derived_key,
                         ECDH_SHARED_KEYSIZE_BITS);
         if (ret != 0) {
-                TESTS("test 6.0: mbedtls_aes_setkey_enc host FAILED!\n");
+                TESTS("test 5.0: mbedtls_aes_setkey_enc host FAILED!\n");
         } else {
                 count++;
-                TESTS("test 6.0: mbedtls_aes_setkey_enc host OK!\n");
+                TESTS("test 5.0: mbedtls_aes_setkey_enc host OK!\n");
         }
-        /* test 6.1 */
+        /* test 5.1 */
         ret = mbedtls_aes_setkey_dec(&remote_aes_ctx, remote_derived_key,
                         ECDH_SHARED_KEYSIZE_BITS);
         if (ret != 0) {
-                TESTS("test 6.1: mbedtls_aes_setkey_enc remote FAILED!\n");
+                TESTS("test 5.1: mbedtls_aes_setkey_enc remote FAILED!\n");
         } else {
                 count++;
-                TESTS("test 6.1: mbedtls_aes_setkey_enc remote OK!\n");
+                TESTS("test 5.1: mbedtls_aes_setkey_enc remote OK!\n");
         }
 
         sts_encrypt_aes_ecb(&host_aes_ctx, message, enc_msg, size);
         sts_decrypt_aes_ecb(&remote_aes_ctx, enc_msg, dec_msg, size);
 
-        /* test 7.0 */
+        /* test 6.0 */
         ret = strcmp((char*)message, (char*)dec_msg);
         if (ret < 0) {
-                TESTS("test 7.0: sts_encrypt_decrypt verification FAILED!\n");
+                TESTS("test 6.0: sts_encrypt_decrypt verification FAILED!\n");
         } else {
                 count++;
-                TESTS("test 7.0: sts_encrypt_decrypt verification OK!\n\n");
+                TESTS("test 6.0: sts_encrypt_decrypt verification OK!\n\n");
         }
 
         /* free */

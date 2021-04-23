@@ -1,8 +1,4 @@
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
 #include <pthread.h>
-#include <sys/types.h>
 
 #include "sts.h"
 #include "log.h"
@@ -116,12 +112,6 @@ static int _sts_compute_shared_secret(char *master_QX, char *master_QY)
                         sts_genrand, NULL);
         if (ret != 0) {
                 ERROR("sts: mbedtls_ecp_point_read_string()\n");
-                return -1;
-        }
-        ret = sts_verify_derived_keylen(ctx.derived_key, 
-                        sizeof(ctx.derived_key), 256);
-        if (ret != 0) {
-                ERROR("sts: sts_verify_derived_keylen()\n");
                 return -1;
         }
 

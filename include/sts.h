@@ -18,9 +18,6 @@
 #ifndef STS_H
 #define STS_H
 
-#include <stdlib.h>
-#include <time.h>
-
 #include "MQTTLinux.h"
 #include "MQTTClient.h"
 #include "ecdh.h"
@@ -64,7 +61,7 @@
 #define STS_HEADERSIZE 10
 #define STS_MSG_MAXLEN 1024
 
-/* sts protocole state */
+/* sts protocol states */
 #define STS_STEP_0 0
 #define STS_STEP_1 1
 #define STS_STEP_2 2
@@ -126,8 +123,8 @@ int sts_help(char **argv);
 int sts_exit(char **argv);
 int sts_start_session(char **argv);
 int sts_stop_session(char **argv);
-int sts_send(char **argv);
 int sts_status(char **argv);
+int sts_send(char **argv);
 int sts_sendenc(char **argv);
 
 /* security */
@@ -135,8 +132,6 @@ void sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input,
                 unsigned char *output, size_t size);
 void sts_decrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
                 unsigned char *output, size_t size);
-void sts_print_derived_key(const unsigned char *buf, size_t size);
-int sts_verify_derived_keylen(const unsigned char *buf, size_t size, size_t len);
 int sts_genrand(void *rng_state, unsigned char *output, size_t len);
 
 /* tests */

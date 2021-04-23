@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <sys/wait.h>
 
 #include "sts.h"
@@ -8,34 +7,35 @@
 /* CORE SHELL */
 ////////////////////////////////////////////////////////////////////////////////
 static char *builtin_cmd[] = {
-        "help",
-        "exit",
         "start",
         "stop",
         "status",
         "send",
         "sendenc",
+        "help",
+        "exit",
 };
 
 static char *builtin_cmd_desc[] = {
-        "help              prints all commands                        |",
-        "exit              exit shell                                 |",
         "start [CONFIG]    start STS session                          |",
         "stop              stop STS session                           |",
-        "                  example: 'send blah1 blah2 blah3'          |\n| "
-                "status            display status of current session          |",
-        "send [MSG]        send a message to the broker               |",
-        "sendenc [MSG]     send a message with encryption             |",
+        "status            display status of current session          |",
+        "send [MSG]        send mqtt message on subscribed topic      |\n|"
+                "                   example: 'send blah1 blah2 blah3'          |",
+        "sendenc [MSG]     send mqtt message with encryption          |\n|"
+                "                   example: 'sendenc blah1 blah2'             |",
+        "help              prints all commands                        |",
+        "exit              exit shell                                 |",
 };
 
 static int (*builtin_func[]) (char **argv) = {
-        &sts_help,
-        &sts_exit,
         &sts_start_session,
         &sts_stop_session,
         &sts_status,
         &sts_send,
         &sts_sendenc,
+        &sts_help,
+        &sts_exit,
 };
 
 static int sts_num_builtins(void) {
@@ -296,6 +296,61 @@ int sts_stop_session(char **argv)
         return STS_PROMPT;
 }
 
+int sts_send(char **message)
+{
+        int ret = 0;
+        int i = 1;
+        size_t msg_size = 0;
+        char msg_out[STS_MSG_MAXLEN];
+        MQTTMessage msg;
+        memset(msg_out, 0, sizeof(msg_out));
+        struct sts_context *ctx = sts_get_ctx();
+
+        if (ctx->status == STS_STOPPED) {
+                ERROR("sts: session not started\n");
+                return STS_PROMPT;
+        }
+
+        if (message[1] == NULL) {
+                ERROR("sts: missing param -> 'send [MSG]'\n");
+                return STS_PROMPT;
+        }
+
+        /* compute size of msg */
+        while (message[i] != NULL) {
+                msg_size += strlen(message[i] + 1);
+                i++;
+        }
+
+        if (msg_size > STS_MSG_MAXLEN) {
+                ERROR("sts: message too big, size <= %d\n", STS_MSG_MAXLEN);
+                return STS_PROMPT;
+        }
+
+        /* copy */
+        i = 1;
+        while (message[i] != NULL) {
+                sts_concatenate(msg_out, message[i]);
+                sts_concatenate(msg_out, " ");
+                i++;
+        }
+
+        msg.qos = ctx->qos;
+        msg.payload = (void*)msg_out;
+        msg.payloadlen = strlen(msg_out);
+        msg.retained = ctx->is_retained;
+
+        ret = MQTTPublish(&ctx->client, ctx->topic_pub, &msg);
+        if (ret < 0) {
+                mqtt_disconnect();
+                return STS_PROMPT;
+        }
+        /* echo */
+        INFO("[MQTT_OUT]: %s\n", msg_out);
+        ctx->msg_sent++;
+        return STS_PROMPT;
+}
+
 int sts_sendenc(char **message)
 {
         int ret;
@@ -358,62 +413,6 @@ int sts_sendenc(char **message)
         return STS_PROMPT;
 }
 
-int sts_send(char **message)
-{
-        int ret = 0;
-        int i = 1;
-        size_t msg_size = 0;
-        char msg_out[STS_MSG_MAXLEN];
-        MQTTMessage msg;
-        memset(msg_out, 0, sizeof(msg_out));
-        struct sts_context *ctx = sts_get_ctx();
-
-        if (ctx->status == STS_STOPPED) {
-                ERROR("sts: session not started\n");
-                return STS_PROMPT;
-        }
-
-        if (message[1] == NULL) {
-                ERROR("sts: missing param -> 'send [MSG]'\n");
-                return STS_PROMPT;
-        }
-
-        /* compute size of msg */
-        while (message[i] != NULL) {
-                msg_size += strlen(message[i] + 1);
-                i++;
-        }
-
-        if (msg_size > STS_MSG_MAXLEN) {
-                ERROR("sts: message too big, size <= %d\n", STS_MSG_MAXLEN);
-                return STS_PROMPT;
-        }
-
-        /* copy */
-        i = 1;
-        while (message[i] != NULL) {
-                sts_concatenate(msg_out, message[i]);
-                sts_concatenate(msg_out, " ");
-                i++;
-        }
-
-        msg.qos = ctx->qos;
-        msg.payload = (void*)msg_out;
-        msg.payloadlen = strlen(msg_out);
-        msg.retained = ctx->is_retained;
-
-        ret = MQTTPublish(&ctx->client, ctx->topic_pub, &msg);
-        if (ret < 0) {
-                mqtt_disconnect();
-                return STS_PROMPT;
-        }
-        /* echo */
-        INFO("[MQTT_OUT]: %s\n", msg_out);
-        ctx->msg_sent++;
-        return STS_PROMPT;
-}
-
-/* TODO make a beautiful status with more info on security */
 int sts_status(char **argv)
 {
         (void)argv;
