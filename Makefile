@@ -13,8 +13,8 @@ CFLAGS += -Ilib/paho-mqtt/MQTTClient-C/src/linux/
 CFLAGS += -Ilib/paho-mqtt/MQTTPacket/src/
 CFLAGS += -Ilib/mbedtls/include/mbedtls/
 
-LDLIBS += -lpaho-embed-mqtt3cc
-LDLIBS += -lmbedcrypto
+LDLIBS += -Llib/paho-mqtt/MQTTClient-C/src/ -lpaho-embed-mqtt3cc
+LDLIBS += -Llib/mbedtls/library/ -lmbedcrypto
 LDLIBS += -lpthread
 LDLIBS += -lm
 
