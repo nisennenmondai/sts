@@ -9,7 +9,7 @@ files provided work just fine.
 - clean_session = 0 || 1
 - sts_mode      = nosec || master || slave
 
-Those 4 config files use a public MQTT broker, **THERE IS NO PRIVACY PROTECTION**, get it?
+Those config files use a public MQTT broker, **THERE IS NO PRIVACY PROTECTION**, get it?
 - https://www.emqx.io/mqtt/public-mqtt5-broker
 - Broker: broker.emqx.io
 - TCP Port: 1883

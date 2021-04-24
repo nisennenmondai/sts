@@ -356,6 +356,7 @@ int sts_sendenc(char **message)
         int ret;
         size_t i = 1;
         size_t size = 0;
+        size_t ecb_len = 0;
         char buf[STS_MSG_MAXLEN];
         unsigned char msg[STS_MSG_MAXLEN];
         unsigned char enc[STS_MSG_MAXLEN];
@@ -384,7 +385,7 @@ int sts_sendenc(char **message)
 
         /* compute size of msg */
         while (message[i] != NULL) {
-                size += strlen(message[i] + 1);
+                size += strlen(message[i]);
                 i++;
         }
 
@@ -393,7 +394,8 @@ int sts_sendenc(char **message)
                 return STS_PROMPT;
         }
 
-        /* copy */
+        /* TODO this is temporary work around until shell can handle space char 
+         * with "" */
         i = 1;
         while (message[i] != NULL) {
                 sts_concatenate(buf, message[i]);
@@ -401,12 +403,13 @@ int sts_sendenc(char **message)
                 i++;
         }
 
-        memcpy(msg, buf, strlen(buf));
-        sts_encrypt_aes_ecb(&ctx->host_aes_ctx_enc, msg, enc, size);
+        memcpy(msg, buf, strlen((char*)buf));
+        sts_encrypt_aes_ecb(&ctx->host_aes_ctx_enc, msg, enc, 
+                        strlen((char*)msg), &ecb_len);
 
-        ret = mqtt_publish((char*)enc);
+        ret = mqtt_publish_aes_ecb(enc, ecb_len);
         if (ret < 0) {
-                ERROR("sts: mqtt_publish()\n");
+                ERROR("sts: mqtt_publish_aes_ecb()\n");
                 return STS_PROMPT;
         }
         return STS_PROMPT;
@@ -441,6 +444,7 @@ int sts_status(char **argv)
         INFO("sts: | STS                                      |\n");
         INFO("sts: +==========================================+\n");
         INFO("sts: | sts_mode:        %s\n", ctx->sts_mode);
+        /* TODO rm id_master and slave in nosec mode */
         INFO("sts: | id_master:       %s\n", ctx->id_master);
         INFO("sts: | id_slave:        %s\n", ctx->id_slave);
         INFO("sts: | msg sent:        %u\n", ctx->msg_sent);

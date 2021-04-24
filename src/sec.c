@@ -42,61 +42,53 @@ cleanup:
 }
 
 void sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
-                unsigned char *output, size_t size)
+                unsigned char *output, size_t size, size_t *ecb_len)
 {
         int i;
         int iter;
-
-        /* compute how many iteration */
-        if (size < AES_ECB_BLOCKSIZE) {
-                iter = 1;
-        }     
-
-        if (size % AES_ECB_BLOCKSIZE == 0) {
-                iter = size / AES_ECB_BLOCKSIZE;
-        }
-
-        if (size % AES_ECB_BLOCKSIZE > 0) {
-                iter = (size / AES_ECB_BLOCKSIZE) + 1;
-        }
-
+        size_t tmp = 0;
         unsigned char *p_input = input;
         unsigned char *p_output = output;
+
+        /* compute ecb_len */
+        if (size < ECB_BLOCKSIZE) {
+                tmp = ECB_BLOCKSIZE;
+        } 
+        if (size > ECB_BLOCKSIZE && size % ECB_BLOCKSIZE > 0) {
+                tmp = (ECB_BLOCKSIZE - (size % ECB_BLOCKSIZE)) + size;
+
+        } 
+        if (size % ECB_BLOCKSIZE == 0) {
+                tmp = size;
+        }
+
+        /* compute how many iteration */
+        *ecb_len = tmp;
+        iter = tmp / ECB_BLOCKSIZE;
 
         for (i = 0; i < iter; i++) {
                 mbedtls_aes_crypt_ecb(ctx, MBEDTLS_AES_ENCRYPT, 
                                 p_input, p_output);
-                p_input += AES_ECB_BLOCKSIZE;
-                p_output += AES_ECB_BLOCKSIZE;
+                p_input += ECB_BLOCKSIZE;
+                p_output += ECB_BLOCKSIZE;
         }
 }
 
 void sts_decrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
-                unsigned char *output, size_t size)
+                unsigned char *output, size_t ecb_len)
 {
         int i;
         int iter;
-
-        /* compute how many iteration */
-        if (size < AES_ECB_BLOCKSIZE) {
-                iter = 1;
-        }     
-
-        if (size % AES_ECB_BLOCKSIZE == 0) {
-                iter = size / AES_ECB_BLOCKSIZE;
-        }
-
-        if (size % AES_ECB_BLOCKSIZE > 0) {
-                iter = (size / AES_ECB_BLOCKSIZE) + 1;
-        }
-
         unsigned char *p_input = input;
         unsigned char *p_output = output;
+
+        /* compute how many iteration */
+        iter = ecb_len / ECB_BLOCKSIZE;
 
         for (i = 0; i < iter; i++) {
                 mbedtls_aes_crypt_ecb(ctx, MBEDTLS_AES_DECRYPT, 
                                 p_input, p_output);
-                p_input += AES_ECB_BLOCKSIZE;
-                p_output += AES_ECB_BLOCKSIZE;
+                p_input += ECB_BLOCKSIZE;
+                p_output += ECB_BLOCKSIZE;
         }
 }

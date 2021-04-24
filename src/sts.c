@@ -368,6 +368,7 @@ struct sts_context *sts_get_ctx(void)
 ////////////////////////////////////////////////////////////////////////////////
 static void _mqtt_on_msg_recv(MessageData *data)
 {
+        /* TODO clean this function */
         struct sts_message msg;
         char *msg_inc = NULL;
         memset(msg.header, 0, sizeof(msg.header));
@@ -381,16 +382,20 @@ static void _mqtt_on_msg_recv(MessageData *data)
                 _sts_parse_msg(msg_inc, &msg);
                 _sts_handlers(&msg);
                 if (ctx.encryption == 1) {
+                        unsigned char *enc = NULL;
                         unsigned char dec[STS_MSG_MAXLEN];
-                        unsigned char buf[STS_MSG_MAXLEN];
-                        size_t size = strlen(msg.data);
+                        size_t ecb_len;
+                        enc = calloc((size_t)data->message->payloadlen, 
+                                        sizeof(unsigned char));
+                        ecb_len = data->message->payloadlen;
+                        memcpy(enc, data->message->payload, 
+                                        data->message->payloadlen);
                         memset(dec, 0, sizeof(dec));
-                        memset(buf, 0, sizeof(buf));
-                        memcpy(buf, msg.data, size);
 
-                        sts_decrypt_aes_ecb(&ctx.host_aes_ctx_dec, buf, dec, 
-                                        size);
-                        INFO("[MQTT_INC]: %s\n", dec);
+                        sts_decrypt_aes_ecb(&ctx.host_aes_ctx_dec, enc, dec, 
+                                        ecb_len);
+                        INFO("[MQTT_INC]: %s\n", (char*)dec);
+                        free(enc);
                 }
                 ctx.msg_recv++;
                 free(msg_inc);
@@ -412,6 +417,7 @@ static void *_mqtt_yield(void *argv)
                         INFO("sts: stopping mqttyield thread...\n");
                         INFO("sts: terminating sts client...\n");
                         ctx.thrd_msg_type = 0;
+                        ctx.status = STS_STOPPED;
                         return NULL;
                 }
                 if ((ret = MQTTYield(&ctx.client, 1000)) != 0) {
@@ -498,14 +504,48 @@ int mqtt_publish(char *message)
 {
         int ret = 0;
         MQTTMessage msg;
-        size_t size = strlen(message);
-        if (size > STS_MSG_MAXLEN) {
+        if (strlen(message) > STS_MSG_MAXLEN) {
                 ERROR("sts: publish failed, msg exceed %d\n", STS_MSG_MAXLEN);
                 return -1;
         }
         msg.qos = ctx.qos;
         msg.payload = (void*)message;
-        msg.payloadlen = size;
+        msg.payloadlen = strlen(message);
+        msg.retained = ctx.is_retained;
+
+        ret = MQTTPublish(&ctx.client, ctx.topic_pub, &msg);
+        if (ret < 0) {
+                mqtt_disconnect();
+                return -1;
+        }
+
+        /* echo */
+        if (ctx.no_print == 0) {
+                INFO("[MQTTOUT]: %s\n", message);
+        }
+        ctx.no_print = 0;
+        ctx.msg_sent++;
+        return 0;
+}
+
+int mqtt_publish_aes_ecb(unsigned char *message, size_t ecb_len)
+{
+        int ret = 0;
+        MQTTMessage msg;
+
+        if (ecb_len > STS_MSG_MAXLEN) {
+                ERROR("sts: mqtt_publish_aes_ecb, msg exceed %d\n", 
+                                STS_MSG_MAXLEN);
+                return -1;
+        }
+
+        msg.qos = ctx.qos;
+        msg.payload = (void*)message;
+        /* we are not sending the size of the actual encrypted data but the size
+         * of the original message aligned with ecb_blocksize (16) so if msg
+         * was 17 bytes long, we will need 2 ecb blocks (32 bytes). ecb_len is
+         * needed for the decrypt function */
+        msg.payloadlen = ecb_len;
         msg.retained = ctx.is_retained;
 
         ret = MQTTPublish(&ctx.client, ctx.topic_pub, &msg);

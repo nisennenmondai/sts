@@ -39,7 +39,7 @@
 
 /* sec */
 #define BYTE                      8
-#define AES_ECB_BLOCKSIZE         16
+#define ECB_BLOCKSIZE             16
 #define MPI_STRING_SIZE           128
 #define ECDH_SHARED_KEYSIZE_BITS  256
 #define ECDH_SHARED_KEYSIZE_BYTES ECDH_SHARED_KEYSIZE_BITS / BYTE
@@ -110,6 +110,7 @@ int mqtt_disconnect(void);
 int mqtt_subscribe(void);
 int mqtt_unsubscribe(void);
 int mqtt_publish(char *message);
+int mqtt_publish_aes_ecb(unsigned char *message, size_t ecb_len);
 
 /* sts */
 void sts_free_sec(void);
@@ -129,9 +130,9 @@ int sts_sendenc(char **argv);
 
 /* security */
 void sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
-                unsigned char *output, size_t size);
+                unsigned char *output, size_t size, size_t *ecb_len);
 void sts_decrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
-                unsigned char *output, size_t size);
+                unsigned char *output, size_t ecb_len);
 int sts_genrand(void *rng_state, unsigned char *output, size_t len);
 
 /* tests */
