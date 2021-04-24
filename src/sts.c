@@ -383,12 +383,13 @@ static void _mqtt_on_msg_recv(MessageData *data)
                 if (ctx.encryption == 1) {
                         unsigned char dec[STS_MSG_MAXLEN];
                         unsigned char buf[STS_MSG_MAXLEN];
+                        size_t size = strlen(msg.data);
                         memset(dec, 0, sizeof(dec));
                         memset(buf, 0, sizeof(buf));
+                        memcpy(buf, msg.data, size);
 
-                        strcpy((char*)buf, msg_inc);
                         sts_decrypt_aes_ecb(&ctx.host_aes_ctx_dec, buf, dec, 
-                                        sizeof(buf));
+                                        size);
                         INFO("[MQTT_INC]: %s\n", dec);
                 }
                 ctx.msg_recv++;

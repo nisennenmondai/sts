@@ -401,8 +401,7 @@ int sts_sendenc(char **message)
                 i++;
         }
 
-        strcpy((char*)msg, buf);
-        size = strlen((char*)msg);
+        memcpy(msg, buf, strlen(buf));
         sts_encrypt_aes_ecb(&ctx->host_aes_ctx_enc, msg, enc, size);
 
         ret = mqtt_publish((char*)enc);
