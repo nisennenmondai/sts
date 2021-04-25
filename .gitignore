@@ -1,4 +1,4 @@
 bin/
 obj/
 tags
-tests/ecdh_aes_ecp_256/ecdh_aes_ecp_256
+tests/ecdh_aes_ecb_256/ecdh_aes_ecb_256

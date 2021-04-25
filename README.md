@@ -20,7 +20,7 @@ Those config files use a public MQTT broker, **THERE IS NO PRIVACY PROTECTION**,
 #### HOWTO use as a simple mqtt client
 - **cd** bin/
 - ./sts
-- **start** ../config_nosec_1 (sts_mode = nosec)
+- **start** ../config_nosec (sts_mode = nosec)
 - **send** [your message even with space]
 
 #### HOWTO use with end-to-end encryption with an other client

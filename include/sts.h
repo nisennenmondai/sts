@@ -135,9 +135,6 @@ void sts_decrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input,
                 unsigned char *output, size_t ecb_len);
 int sts_genrand(void *rng_state, unsigned char *output, size_t len);
 
-/* tests */
-int sts_ecdh_aes_test(void);
-
 /* tools */
 void sts_concatenate(char p[], char q[]);
 #endif /* STS_H */

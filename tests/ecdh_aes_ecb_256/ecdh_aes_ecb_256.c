@@ -3,16 +3,17 @@
 
 #define NUMBER_TESTS 11
 
-int sts_ecdh_aes_test(void)
+void sts_ecdh_aes_ecb_test(void)
 {
         TESTS("+================================================+\n");
-        TESTS("|       ECDH - AES MBEDTLS_ECP_DP_SECP256K1      |\n");
+        TESTS("|            ECDH SECP256K1 - AES-ECB            |\n");
         TESTS("+================================================+\n");
         int ret;
         int count = 0;
         size_t olen;
         size_t size;
-        char *msg = "CORE-TEX_LABS";
+        size_t ecb_len;
+        char *msg = "CORE-TEX_LABS: Deadman, PafLeChien, max1point";
 
         mbedtls_ecdh_context host_ecdh_ctx;
         mbedtls_ecdh_context remote_ecdh_ctx;
@@ -111,7 +112,7 @@ int sts_ecdh_aes_test(void)
         memset(dec_msg, 0, STS_MSG_MAXLEN);
 
         size = strlen(msg);
-        strcpy((char*)message, msg);
+        memcpy(message, msg, size);
         ret = mbedtls_aes_setkey_enc(&host_aes_ctx, host_derived_key,
                         ECDH_SHARED_KEYSIZE_BITS);
         if (ret != 0) {
@@ -130,16 +131,16 @@ int sts_ecdh_aes_test(void)
                 TESTS("test 5.1: mbedtls_aes_setkey_enc remote OK!\n");
         }
 
-        sts_encrypt_aes_ecb(&host_aes_ctx, message, enc_msg, size);
-        sts_decrypt_aes_ecb(&remote_aes_ctx, enc_msg, dec_msg, size);
+        sts_encrypt_aes_ecb(&host_aes_ctx, message, enc_msg, size, &ecb_len);
+        sts_decrypt_aes_ecb(&remote_aes_ctx, enc_msg, dec_msg, ecb_len);
 
         /* test 6.0 */
         ret = strcmp((char*)message, (char*)dec_msg);
         if (ret < 0) {
-                TESTS("test 6.0: sts_encrypt_decrypt verification FAILED!\n");
+                TESTS("test 6.0: sts_encrypt_decrypt FAILED!\n");
         } else {
                 count++;
-                TESTS("test 6.0: sts_encrypt_decrypt verification OK!\n\n");
+                TESTS("test 6.0: sts_encrypt_decrypt OK!\n\n");
         }
 
         /* free */
@@ -153,11 +154,9 @@ int sts_ecdh_aes_test(void)
         } else {
                 TESTS("TESTS FAILED: %d/%d\n", count, NUMBER_TESTS);
         }
-
-        return 0;
 }
 
 int main(void)
 {
-        sts_ecdh_aes_test();
+        sts_ecdh_aes_ecb_test();
 }
