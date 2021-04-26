@@ -10,6 +10,7 @@
 int sts_genrand(void *rng_state, unsigned char *output, size_t len)
 {
         int ret;
+
         if (rng_state != NULL) {
                 rng_state  = NULL;
         }
@@ -62,7 +63,7 @@ void sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input,
                 tmp = size;
         }
 
-        /* compute how many iteration */
+        /* compute nbr of iterations */
         *ecb_len = tmp;
         iter = tmp / ECB_BLOCKSIZE;
 
@@ -82,7 +83,7 @@ void sts_decrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input,
         unsigned char *p_input = input;
         unsigned char *p_output = output;
 
-        /* compute how many iteration */
+        /* compute nbr of iterations */
         iter = ecb_len / ECB_BLOCKSIZE;
 
         for (i = 0; i < iter; i++) {

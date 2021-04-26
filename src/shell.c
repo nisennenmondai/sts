@@ -68,10 +68,10 @@ static void sts_welcome(void)
 
 static char *sts_read_line(void)
 {
-        int buffsize = STS_RL_BUFFSIZE;
-        int position = 0;
-        char *buffer = (char*)malloc(buffsize * sizeof(char));
         int c;
+        int position = 0;
+        int buffsize = STS_RL_BUFFSIZE;
+        char *buffer = (char*)malloc(buffsize * sizeof(char));
 
         /* check if buffer has been allocated */
         if (!buffer) {
@@ -107,10 +107,10 @@ static char *sts_read_line(void)
 
 static char **sts_split_line(char *line)
 {
-        int buffsize = STS_TOK_BUFFSIZE;
         int position = 0;
-        char **tokens = malloc(buffsize * sizeof(char*));
+        int buffsize = STS_TOK_BUFFSIZE;
         char *token;
+        char **tokens = malloc(buffsize * sizeof(char*));
 
         /* check if buffer has been allocated */
         if (!tokens) {
@@ -149,8 +149,8 @@ static char **sts_split_line(char *line)
 static int sts_launch(char **argv)
 {
         pid_t pid, wpid;
-        (void)wpid;
         int status;
+        (void)wpid;
 
         pid = fork();
         if (pid == 0) {
@@ -200,9 +200,9 @@ static int sts_execute(char **argv)
 /* loop getting input and executing it */
 static void sts_loop(void)
 {
+        int status;
         char *line;
         char **argv;
-        int status;
 
         do {
                 printf("> ");
@@ -221,9 +221,10 @@ static void sts_loop(void)
 ////////////////////////////////////////////////////////////////////////////////
 int sts_start_session(char **argv)
 {
-        struct sts_context *ctx = sts_get_ctx();
         (void)argv;
-        int ret = 0;
+        int ret;
+        struct sts_context *ctx = sts_get_ctx();
+
         if (ctx->status == STS_STARTED) {
                 ERROR("sts: a session has already been started already\n");
                 return STS_PROMPT;
@@ -276,6 +277,7 @@ int sts_stop_session(char **argv)
         (void)argv;
         int ret;
         struct sts_context *ctx = sts_get_ctx();
+
         if (ctx->status == STS_STOPPED) {
                 ERROR("sts: session not started\n");
                 return STS_PROMPT;
@@ -298,16 +300,22 @@ int sts_stop_session(char **argv)
 
 int sts_send(char **message)
 {
-        int ret = 0;
+        int ret;
         int i = 1;
         size_t msg_size = 0;
         char msg_out[STS_MSG_MAXLEN];
         MQTTMessage msg;
+
         memset(msg_out, 0, sizeof(msg_out));
         struct sts_context *ctx = sts_get_ctx();
 
         if (ctx->status == STS_STOPPED) {
                 ERROR("sts: session not started\n");
+                return STS_PROMPT;
+        }
+
+        if (ctx->encryption == 1) {
+                ERROR("sts: encryption ON, use 'sendenc' instead\n");
                 return STS_PROMPT;
         }
 
@@ -373,8 +381,8 @@ int sts_sendenc(char **message)
                 return STS_PROMPT;
         }
 
-        if(ctx->encryption != 1) {
-                ERROR("sts: no encryption with slave||master established\n");
+        if(ctx->encryption == 0) {
+                ERROR("sts: encryption OFF, use 'send' instead\n");
                 return STS_PROMPT;
         }
 
@@ -394,8 +402,6 @@ int sts_sendenc(char **message)
                 return STS_PROMPT;
         }
 
-        /* TODO this is temporary work around until shell can handle space char 
-         * with "" */
         i = 1;
         while (message[i] != NULL) {
                 sts_concatenate(buf, message[i]);
@@ -444,9 +450,11 @@ int sts_status(char **argv)
         INFO("sts: | STS                                      |\n");
         INFO("sts: +==========================================+\n");
         INFO("sts: | sts_mode:        %s\n", ctx->sts_mode);
-        /* TODO rm id_master and slave in nosec mode */
-        INFO("sts: | id_master:       %s\n", ctx->id_master);
-        INFO("sts: | id_slave:        %s\n", ctx->id_slave);
+
+        if (ctx->encryption == 1) {
+                INFO("sts: | id_master:       %s\n", ctx->id_master);
+                INFO("sts: | id_slave:        %s\n", ctx->id_slave);
+        }
         INFO("sts: | msg sent:        %u\n", ctx->msg_sent);
         INFO("sts: | msg recv:        %u\n", ctx->msg_recv);
 
@@ -468,6 +476,7 @@ int sts_help(char **argv)
 {
         (void)argv;
         int i;
+
         printf("+--------------------------------------------------------------+\n");
         printf("| Commands        | Description                                |\n");
         printf("+--------------------------------------------------------------+\n");

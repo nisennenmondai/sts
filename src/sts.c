@@ -253,6 +253,7 @@ static void _sts_handlers(struct sts_message *msg)
 static int _sts_load_config(const char *config)
 {
         FILE *fp;
+
         fp = fopen(config, "r");
         if (fp == NULL)
         {
@@ -318,8 +319,10 @@ static int _sts_load_config(const char *config)
 
 int sts_init(const char *config)
 {
+        int ret;
+
         sts_reset_ctx();
-        int ret = _sts_load_config(config);
+        ret = _sts_load_config(config);
         if (ret < 0) {
                 return -1;
         }
@@ -368,48 +371,51 @@ struct sts_context *sts_get_ctx(void)
 ////////////////////////////////////////////////////////////////////////////////
 static void _mqtt_on_msg_recv(MessageData *data)
 {
-        /* TODO clean this function */
         struct sts_message msg;
-        char *msg_inc = NULL;
-        memset(msg.header, 0, sizeof(msg.header));
-        memset(msg.data, 0, sizeof(msg.data));
-        msg_inc = calloc((size_t)data->message->payloadlen + 1, sizeof(char));
-        memcpy(msg_inc, data->message->payload, data->message->payloadlen);
 
-        /* if security mode */
-        if (strcmp(ctx.sts_mode, "master") == 0 || 
-                        strcmp(ctx.sts_mode, "slave") == 0) {
+        /* if sts_init or nosec mode */
+        if (ctx.encryption == 0 || strcmp(ctx.sts_mode, "nosec") == 0) {
+                char *msg_inc = NULL;
+                memset(msg.header, 0, sizeof(msg.header));
+                memset(msg.data, 0, sizeof(msg.data));
+                msg_inc = calloc((size_t)data->message->payloadlen + 1, sizeof(char));
+                memcpy(msg_inc, data->message->payload, data->message->payloadlen);
+
                 _sts_parse_msg(msg_inc, &msg);
                 _sts_handlers(&msg);
-                if (ctx.encryption == 1) {
-                        unsigned char *enc = NULL;
-                        unsigned char dec[STS_MSG_MAXLEN];
-                        size_t ecb_len;
-                        enc = calloc((size_t)data->message->payloadlen, 
-                                        sizeof(unsigned char));
-                        ecb_len = data->message->payloadlen;
-                        memcpy(enc, data->message->payload, 
-                                        data->message->payloadlen);
-                        memset(dec, 0, sizeof(dec));
 
-                        sts_decrypt_aes_ecb(&ctx.host_aes_ctx_dec, enc, dec, 
-                                        ecb_len);
-                        INFO("[MQTT_INC]: %s\n", (char*)dec);
-                        free(enc);
+                /* only print in nosec mode */
+                if (strcmp(ctx.sts_mode, "nosec") == 0) {
+                        INFO("[MQTT_INC]: %s\n", msg_inc);
                 }
                 ctx.msg_recv++;
                 free(msg_inc);
+        }
+
+        if (ctx.encryption == 1) {
+                unsigned char *enc = NULL;
+                unsigned char dec[STS_MSG_MAXLEN];
+                size_t ecb_len;
+                enc = calloc((size_t)data->message->payloadlen, 
+                                sizeof(unsigned char));
+                ecb_len = data->message->payloadlen;
+                memcpy(enc, data->message->payload, 
+                                data->message->payloadlen);
+                memset(dec, 0, sizeof(dec));
+
+                sts_decrypt_aes_ecb(&ctx.host_aes_ctx_dec, enc, dec, 
+                                ecb_len);
+                INFO("[MQTT_INC]: %s\n", (char*)dec);
+                ctx.msg_recv++;
+                free(enc);
                 return;
         }
-        INFO("[MQTT_INC]: %s\n", msg_inc);
-        ctx.msg_recv++;
-        free(msg_inc);
 }
 
 static void *_mqtt_yield(void *argv)
 {
         (void)argv;
-        int ret = 0;
+        int ret;
         INFO("sts: starting mqttyield thread...\n");
         while (1) {
                 if (ctx.thrd_msg_type == STS_KILL_THREAD || 
@@ -430,7 +436,7 @@ static void *_mqtt_yield(void *argv)
 
 int mqtt_connect(void)
 {
-        int ret = 0;
+        int ret;
 
         /* setting conn params */
         MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
@@ -459,7 +465,7 @@ int mqtt_connect(void)
 
 int mqtt_disconnect(void)
 {
-        int ret = 0;
+        int ret;
 
         ret = MQTTDisconnect(&ctx.client);
         if (ret < 0) {
@@ -476,7 +482,8 @@ int mqtt_disconnect(void)
 
 int mqtt_subscribe(void)
 {
-        int ret = 0;
+        int ret;
+
         ret = MQTTSubscribe(&ctx.client, ctx.topic_sub, ctx.qos, 
                         _mqtt_on_msg_recv);
         if (ret < 0) {
@@ -491,7 +498,8 @@ int mqtt_subscribe(void)
 
 int mqtt_unsubscribe(void)
 {
-        int ret = 0;
+        int ret;
+
         ret = MQTTUnsubscribe(&ctx.client, ctx.topic_pub);
         if (ret < 0) {
                 return -1;
@@ -500,17 +508,18 @@ int mqtt_unsubscribe(void)
         return 0;
 }
 
-int mqtt_publish(char *message)
+int mqtt_publish(char *string)
 {
-        int ret = 0;
+        int ret;
         MQTTMessage msg;
-        if (strlen(message) > STS_MSG_MAXLEN) {
+
+        if (strlen(string) > STS_MSG_MAXLEN) {
                 ERROR("sts: publish failed, msg exceed %d\n", STS_MSG_MAXLEN);
                 return -1;
         }
         msg.qos = ctx.qos;
-        msg.payload = (void*)message;
-        msg.payloadlen = strlen(message);
+        msg.payload = (void*)string;
+        msg.payloadlen = strlen(string);
         msg.retained = ctx.is_retained;
 
         ret = MQTTPublish(&ctx.client, ctx.topic_pub, &msg);
@@ -521,16 +530,16 @@ int mqtt_publish(char *message)
 
         /* echo */
         if (ctx.no_print == 0) {
-                INFO("[MQTTOUT]: %s\n", message);
+                INFO("[MQTTOUT]: %s\n", string);
         }
         ctx.no_print = 0;
         ctx.msg_sent++;
         return 0;
 }
 
-int mqtt_publish_aes_ecb(unsigned char *message, size_t ecb_len)
+int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len)
 {
-        int ret = 0;
+        int ret;
         MQTTMessage msg;
 
         if (ecb_len > STS_MSG_MAXLEN) {
@@ -540,7 +549,7 @@ int mqtt_publish_aes_ecb(unsigned char *message, size_t ecb_len)
         }
 
         msg.qos = ctx.qos;
-        msg.payload = (void*)message;
+        msg.payload = (void*)enc;
         /* we are not sending the size of the actual encrypted data but the size
          * of the original message aligned with ecb_blocksize (16) so if msg
          * was 17 bytes long, we will need 2 ecb blocks (32 bytes). ecb_len is
@@ -556,7 +565,7 @@ int mqtt_publish_aes_ecb(unsigned char *message, size_t ecb_len)
 
         /* echo */
         if (ctx.no_print == 0) {
-                INFO("[MQTTOUT]: %s\n", message);
+                INFO("[MQTTOUT]: %s\n", enc);
         }
         ctx.no_print = 0;
         ctx.msg_sent++;
@@ -568,7 +577,7 @@ int mqtt_publish_aes_ecb(unsigned char *message, size_t ecb_len)
 ////////////////////////////////////////////////////////////////////////////////
 int sts_init_sec(void)
 {
-        int ret = 0;
+        int ret;
         size_t olen = 0;
         char msg_out[STS_MSG_MAXLEN];
         char slave_QX[MPI_STRING_SIZE];

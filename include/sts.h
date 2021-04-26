@@ -109,8 +109,8 @@ int mqtt_connect(void);
 int mqtt_disconnect(void);
 int mqtt_subscribe(void);
 int mqtt_unsubscribe(void);
-int mqtt_publish(char *message);
-int mqtt_publish_aes_ecb(unsigned char *message, size_t ecb_len);
+int mqtt_publish(char *string);
+int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len);
 
 /* sts */
 void sts_free_sec(void);
@@ -125,8 +125,8 @@ int sts_exit(char **argv);
 int sts_start_session(char **argv);
 int sts_stop_session(char **argv);
 int sts_status(char **argv);
-int sts_send(char **argv);
-int sts_sendenc(char **argv);
+int sts_send(char **argv);      /* for tests only */
+int sts_sendenc(char **argv);   /* for tests only */
 
 /* security */
 void sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
