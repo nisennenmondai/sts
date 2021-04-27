@@ -20,9 +20,9 @@ static char *builtin_cmd_desc[] = {
         "start [CONFIG]    start STS session                          |",
         "stop              stop STS session                           |",
         "status            display status of current session          |",
-        "send [MSG]        send mqtt message on subscribed topic      |\n|"
+        "send [MSG]        test send mqtt message                     |\n|"
                 "                   example: 'send blah1 blah2 blah3'          |",
-        "sendenc [MSG]     send mqtt message with encryption          |\n|"
+        "sendenc [MSG]     test send encrypted mqtt message           |\n|"
                 "                   example: 'sendenc blah1 blah2'             |",
         "help              prints all commands                        |",
         "exit              exit shell                                 |",
@@ -32,8 +32,8 @@ static int (*builtin_func[]) (char **argv) = {
         &sts_start_session,
         &sts_stop_session,
         &sts_status,
-        &sts_send,
-        &sts_sendenc,
+        &sts_test_send_nosec,
+        &sts_test_send_sec,
         &sts_help,
         &sts_exit,
 };
@@ -298,16 +298,53 @@ int sts_stop_session(char **argv)
         return STS_PROMPT;
 }
 
-int sts_send(char **message)
+int sts_send_nosec(char *str)
+{
+        int ret;
+
+        ret = mqtt_publish(str);
+
+        if (ret < 0) {
+                ERROR("sts: mqtt_publish()\n");
+                return -1;
+        }
+        return 0;
+}
+
+
+int sts_send_sec(char *str)
+{
+        int ret;
+        size_t ecb_len = 0;
+        unsigned char msg[STS_MSG_MAXLEN];
+        unsigned char enc[STS_MSG_MAXLEN];
+        struct sts_context *ctx = sts_get_ctx();
+
+        memset(msg, 0, sizeof(msg));
+        memset(enc, 0, sizeof(enc));
+
+        memcpy(msg, str, strlen((char*)str));
+
+        sts_encrypt_aes_ecb(&ctx->host_aes_ctx_enc, msg, enc, 
+                        strlen((char*)msg), &ecb_len);
+
+        ret = mqtt_publish_aes_ecb(enc, ecb_len);
+        if (ret < 0) {
+                ERROR("sts: mqtt_publish_aes_ecb()\n");
+                return -1;
+        }
+        return 0;
+}
+
+int sts_test_send_nosec(char **message)
 {
         int ret;
         int i = 1;
         size_t msg_size = 0;
         char msg_out[STS_MSG_MAXLEN];
-        MQTTMessage msg;
+        struct sts_context *ctx = sts_get_ctx();
 
         memset(msg_out, 0, sizeof(msg_out));
-        struct sts_context *ctx = sts_get_ctx();
 
         if (ctx->status == STS_STOPPED) {
                 ERROR("sts: session not started\n");
@@ -343,38 +380,23 @@ int sts_send(char **message)
                 i++;
         }
 
-        msg.qos = ctx->qos;
-        msg.payload = (void*)msg_out;
-        msg.payloadlen = strlen(msg_out);
-        msg.retained = ctx->is_retained;
-
-        ret = MQTTPublish(&ctx->client, ctx->topic_pub, &msg);
+        ret = sts_send_nosec(msg_out);
         if (ret < 0) {
-                mqtt_disconnect();
+                ERROR("sts: sts_send_nosec() failed\n");
                 return STS_PROMPT;
         }
-        /* echo */
-        INFO("[MQTT_OUT]: %s\n", msg_out);
-        ctx->msg_sent++;
         return STS_PROMPT;
 }
 
-int sts_sendenc(char **message)
+int sts_test_send_sec(char **message)
 {
         int ret;
         size_t i = 1;
         size_t size = 0;
-        size_t ecb_len = 0;
-        char buf[STS_MSG_MAXLEN];
-        unsigned char msg[STS_MSG_MAXLEN];
-        unsigned char enc[STS_MSG_MAXLEN];
-        unsigned char dec[STS_MSG_MAXLEN];
+        char str[STS_MSG_MAXLEN];
         struct sts_context *ctx = sts_get_ctx();
 
-        memset(msg, 0, sizeof(msg));
-        memset(enc, 0, sizeof(enc));
-        memset(dec, 0, sizeof(dec));
-        memset(buf, 0, sizeof(buf));
+        memset(str, 0, sizeof(str));
 
         if (ctx->status == STS_STOPPED) {
                 ERROR("sts: session not started\n");
@@ -404,18 +426,14 @@ int sts_sendenc(char **message)
 
         i = 1;
         while (message[i] != NULL) {
-                sts_concatenate(buf, message[i]);
-                sts_concatenate(buf, " ");
+                sts_concatenate(str, message[i]);
+                sts_concatenate(str, " ");
                 i++;
         }
 
-        memcpy(msg, buf, strlen((char*)buf));
-        sts_encrypt_aes_ecb(&ctx->host_aes_ctx_enc, msg, enc, 
-                        strlen((char*)msg), &ecb_len);
-
-        ret = mqtt_publish_aes_ecb(enc, ecb_len);
+        ret = sts_send_sec(str);
         if (ret < 0) {
-                ERROR("sts: mqtt_publish_aes_ecb()\n");
+                ERROR("sts: sts_send_sec() failed\n");
                 return STS_PROMPT;
         }
         return STS_PROMPT;

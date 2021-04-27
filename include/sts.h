@@ -120,13 +120,15 @@ int sts_init_sec(void);
 struct sts_context *sts_get_ctx(void);
 
 /* sts commands */
-int sts_help(char **argv);
-int sts_exit(char **argv);
 int sts_start_session(char **argv);
 int sts_stop_session(char **argv);
+int sts_send_nosec(char *str);
+int sts_send_sec(char *str);
+int sts_help(char **argv);
+int sts_exit(char **argv);
 int sts_status(char **argv);
-int sts_send(char **argv);      /* for tests only */
-int sts_sendenc(char **argv);   /* for tests only */
+int sts_test_send_nosec(char **argv);   /* for tests only */
+int sts_test_send_sec(char **argv);     /* for tests only */
 
 /* security */
 void sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
