@@ -8,16 +8,16 @@
 #include "ctr_drbg.h"
 #include "entropy.h"
 
-void sts_encode(unsigned char *id, size_t size)
+void sts_encode(unsigned char *data, size_t size)
 {
-        reverse_bits_order(id, size);
-        xor_bits(id, size);
+        reverse_bits_order(data, size);
+        xor_bits(data, size);
 }
 
-void sts_decode(unsigned char *id, size_t size)
+void sts_decode(unsigned char *data, size_t size)
 {
-        xor_bits(id, size);
-        reverse_bits_order(id, size);
+        xor_bits(data, size);
+        reverse_bits_order(data, size);
 }
 
 int sts_drbg(void *rng_state, unsigned char *output, size_t len)
