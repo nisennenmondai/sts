@@ -1,20 +1,3 @@
-/*
- * =============================================================================
- *
- *       Filename:  sts.h
- *
- *    Description:  Secure Telemetry Shell 
- *
- *        Version:  1.0
- *        Created:  03/11/2020 10:24:53 AM
- *       Revision:  none
- *       Compiler:  gcc
- *
- *         Author:  nisennenmondai,
- *   Organization:  
- *
- * =============================================================================
- */
 #ifndef STS_H
 #define STS_H
 
@@ -135,8 +118,8 @@ void sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input,
                 unsigned char *output, size_t size, size_t *ecb_len);
 void sts_decrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
                 unsigned char *output, size_t ecb_len);
-int sts_genrand(void *rng_state, unsigned char *output, size_t len);
+int sts_drbg(void *rng_state, unsigned char *output, size_t len);
+void sts_encode_id(unsigned char *id, size_t size);
+void sts_decode_id(unsigned char *id, size_t size);
 
-/* tools */
-void sts_concatenate(char p[], char q[]);
 #endif /* STS_H */

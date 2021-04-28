@@ -2,6 +2,7 @@
 
 #include "sts.h"
 #include "log.h"
+#include "tools.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 /* CORE SHELL */
@@ -375,8 +376,8 @@ int sts_test_send_nosec(char **message)
         /* copy */
         i = 1;
         while (message[i] != NULL) {
-                sts_concatenate(msg_out, message[i]);
-                sts_concatenate(msg_out, " ");
+                concatenate(msg_out, message[i]);
+                concatenate(msg_out, " ");
                 i++;
         }
 
@@ -426,8 +427,8 @@ int sts_test_send_sec(char **message)
 
         i = 1;
         while (message[i] != NULL) {
-                sts_concatenate(str, message[i]);
-                sts_concatenate(str, " ");
+                concatenate(str, message[i]);
+                concatenate(str, " ");
                 i++;
         }
 

@@ -48,7 +48,7 @@ void sts_ecdh_aes_ecb_test(void)
 
         /* test 2.0 */
         ret = mbedtls_ecdh_gen_public(&host_ecdh_ctx.grp, &host_ecdh_ctx.d,
-                        &host_ecdh_ctx.Q, sts_genrand, NULL);
+                        &host_ecdh_ctx.Q, sts_drbg, NULL);
         if (ret != 0) {
                 TESTS("test 2.0: mbedtls_ecdh_gen_public host FAILED!\n");
         } else {
@@ -58,7 +58,7 @@ void sts_ecdh_aes_ecb_test(void)
 
         /* test 2.1 */
         ret = mbedtls_ecdh_gen_public(&remote_ecdh_ctx.grp, &remote_ecdh_ctx.d,
-                        &remote_ecdh_ctx.Q, sts_genrand, NULL);
+                        &remote_ecdh_ctx.Q, sts_drbg, NULL);
         if (ret != 0) {
                 TESTS("test 2.1: mbedtls_ecdh_gen_public remote FAILED!\n");
         } else {
@@ -86,7 +86,7 @@ void sts_ecdh_aes_ecb_test(void)
 
         /* test 4.0 */
         ret = mbedtls_ecdh_calc_secret(&host_ecdh_ctx, &olen, host_derived_key,
-                        sizeof(host_derived_key), sts_genrand, NULL);
+                        sizeof(host_derived_key), sts_drbg, NULL);
         if (ret != 0) {
                 TESTS("test 4.0: mbedtls_ecdh_calc_secret host FAILED!\n");
         } else {
@@ -96,7 +96,7 @@ void sts_ecdh_aes_ecb_test(void)
 
         /* test 4.1 */
         ret = mbedtls_ecdh_calc_secret(&remote_ecdh_ctx, &olen, remote_derived_key,
-                        sizeof(remote_derived_key), sts_genrand, NULL);
+                        sizeof(remote_derived_key), sts_drbg, NULL);
         if (ret != 0) {
                 TESTS("test 4.1: mbedtls_ecdh_calc_secret remote FAILED!\n");
         } else {

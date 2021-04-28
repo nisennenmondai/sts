@@ -2,6 +2,7 @@
 
 #include "sts.h"
 #include "log.h"
+#include "tools.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 /* VARIABLES */
@@ -17,26 +18,6 @@ static unsigned char sendbuff[SENDBUFFSIZE];
 static unsigned char readbuff[READBUFFSIZE];
 
 static pthread_t _mqttyield_thrd_pid;
-
-////////////////////////////////////////////////////////////////////////////////
-/* TOOLS */
-////////////////////////////////////////////////////////////////////////////////
-void sts_concatenate(char p[], char q[])
-{
-        int c = 0;
-        int d = 0;
-
-        while (p[c] != '\0') {
-                c++;
-        }
-
-        while (q[d] != '\0') {
-                p[c] = q[d];
-                d++;
-                c++;
-        }
-        p[c] = '\0';
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 /* STS */
@@ -109,7 +90,7 @@ static int _sts_compute_shared_secret(char *master_QX, char *master_QY)
         ret = mbedtls_ecdh_calc_secret(&ctx.host_ecdh_ctx, 
                         &olen, ctx.derived_key, 
                         sizeof(ctx.derived_key), 
-                        sts_genrand, NULL);
+                        sts_drbg, NULL);
         if (ret != 0) {
                 ERROR("sts: mbedtls_ecp_point_read_string()\n");
                 return -1;
@@ -587,6 +568,7 @@ int sts_init_sec(void)
 
         ctx.master_flag = STS_STEP_0;
         ctx.slave_flag = STS_STEP_0;
+
         memset(msg_out, 0, sizeof(msg_out));
         memset(slave_QX, 0, sizeof(slave_QX));
         memset(slave_QY, 0, sizeof(slave_QY));
@@ -596,14 +578,15 @@ int sts_init_sec(void)
         mbedtls_aes_init(&ctx.host_aes_ctx_dec);
         mbedtls_aes_init(&ctx.host_aes_ctx_enc);
         mbedtls_ecdh_init(&ctx.host_ecdh_ctx);
+
         ret = mbedtls_ecdh_setup(&ctx.host_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
         if (ret != 0) {
                 ERROR("sts: mbedtls_ecdh_setup()\n");
                 return -1;
         }
         ret = mbedtls_ecdh_gen_public(&ctx.host_ecdh_ctx.grp, 
-                        &ctx.host_ecdh_ctx.d, &ctx.host_ecdh_ctx.Q, sts_genrand, 
-                        NULL);
+                        &ctx.host_ecdh_ctx.d, &ctx.host_ecdh_ctx.Q, 
+                        sts_drbg, NULL);
         if (ret != 0) {
                 ERROR("sts: mbedtls_ecdh_gen_public()\n");
                 return -1;
@@ -615,8 +598,8 @@ int sts_init_sec(void)
                 /* send AUTHREQ to slave */
                 TRACE("sts: Sending AUTHREQ to slave...\n");
                 memset(msg_out, 0, sizeof(msg_out));
-                sts_concatenate(msg_out, STS_AUTHREQ);
-                sts_concatenate(msg_out, ctx.id_slave);
+                concatenate(msg_out, STS_AUTHREQ);
+                concatenate(msg_out, ctx.id_slave);
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
@@ -635,7 +618,7 @@ int sts_init_sec(void)
                 /* send AUTHACK to slave */
                 TRACE("sts: Sending AUTHACK to slave...\n");
                 memset(msg_out, 0, sizeof(msg_out));
-                sts_concatenate(msg_out, STS_AUTHACK);
+                concatenate(msg_out, STS_AUTHACK);
 
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
@@ -659,11 +642,11 @@ int sts_init_sec(void)
                         ERROR("sts: mbedtls_mpi_write_string()\n");
                         return -1;
                 }
-                sts_concatenate(msg_out, STS_RDYREQ);
-                sts_concatenate(msg_out, "X");
-                sts_concatenate(msg_out, master_QX);
-                sts_concatenate(msg_out, "Y");
-                sts_concatenate(msg_out, master_QY);
+                concatenate(msg_out, STS_RDYREQ);
+                concatenate(msg_out, "X");
+                concatenate(msg_out, master_QX);
+                concatenate(msg_out, "Y");
+                concatenate(msg_out, master_QY);
 
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
@@ -683,7 +666,7 @@ int sts_init_sec(void)
                 /* send RDYACK to slave */
                 TRACE("sts: Sending RDYACK to slave\n");
                 memset(msg_out, 0, sizeof(msg_out));
-                sts_concatenate(msg_out, STS_RDYACK);
+                concatenate(msg_out, STS_RDYACK);
 
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
@@ -706,7 +689,7 @@ int sts_init_sec(void)
                 /* send AUTHACK to master */
                 TRACE("sts: Sending AUTHACK to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
-                sts_concatenate(msg_out, STS_AUTHACK);
+                concatenate(msg_out, STS_AUTHACK);
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
@@ -718,8 +701,8 @@ int sts_init_sec(void)
                 /* send AUTHREQ to master */
                 TRACE("sts: Sending AUTHREQ to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
-                sts_concatenate(msg_out, STS_AUTHREQ);
-                sts_concatenate(msg_out, ctx.id_master);
+                concatenate(msg_out, STS_AUTHREQ);
+                concatenate(msg_out, ctx.id_master);
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
@@ -739,7 +722,7 @@ int sts_init_sec(void)
                 /* send RDYACK to master */
                 TRACE("sts: Sending RDYACK to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
-                sts_concatenate(msg_out, STS_RDYACK);
+                concatenate(msg_out, STS_RDYACK);
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
@@ -763,11 +746,11 @@ int sts_init_sec(void)
                         return -1;
                 }
                 memset(msg_out, 0, sizeof(msg_out));
-                sts_concatenate(msg_out, STS_RDYREQ);
-                sts_concatenate(msg_out, "X");
-                sts_concatenate(msg_out, slave_QX);
-                sts_concatenate(msg_out, "Y");
-                sts_concatenate(msg_out, slave_QY);
+                concatenate(msg_out, STS_RDYREQ);
+                concatenate(msg_out, "X");
+                concatenate(msg_out, slave_QX);
+                concatenate(msg_out, "Y");
+                concatenate(msg_out, slave_QY);
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {

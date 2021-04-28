@@ -3,11 +3,26 @@
 
 #include "sts.h"
 #include "log.h"
+#include "tools.h"
 
 #include "ctr_drbg.h"
 #include "entropy.h"
 
-int sts_genrand(void *rng_state, unsigned char *output, size_t len)
+void sts_encode_id(unsigned char *id, size_t size)
+{
+        reverse_bits_order(id, size);
+        xor_bits(id, size);
+        reverse_bits_order(id, size);
+}
+
+void sts_decode_id(unsigned char *id, size_t size)
+{
+        reverse_bits_order(id, size);
+        xor_bits(id, size);
+        reverse_bits_order(id, size);
+}
+
+int sts_drbg(void *rng_state, unsigned char *output, size_t len)
 {
         int ret;
 
