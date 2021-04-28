@@ -38,10 +38,8 @@ Master side
 Soon to be done...
 
 ### TODO improve security features
-- I want to support a better AES algorithm than ECB (CBC) **0%**
-- I want to authentify clients with auto generated ID at each session **0%**
-- Nice to have: I want to have digital signature with ECDSA **0**
-- Nice to have: I want to have debug level **0%**
+- I want to support a better AES CBC **0%**
+- Nice to have: I want to have digital signature with ECDSA **0%**
 
 ### TODO make beautiful tests
 - I want to have beautiful tests (mqtt, sts, security) **5%**
