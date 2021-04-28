@@ -302,10 +302,20 @@ int sts_stop_session(char **argv)
 int sts_send_nosec(char *str)
 {
         int ret;
+        struct sts_context *ctx = sts_get_ctx();
+
+        if (ctx->status == STS_STOPPED) {
+                ERROR("sts: session not started\n");
+                return -1;
+        }
+
+        if (ctx->encryption == 1) {
+                ERROR("sts: encryption ON, use 'send_sec()' instead\n");
+                return -1;
+        }
 
         sts_encode((unsigned char*)str, STS_MSG_MAXLEN);
         ret = mqtt_publish(str);
-
         if (ret < 0) {
                 ERROR("sts: mqtt_publish()\n");
                 return -1;
@@ -321,6 +331,16 @@ int sts_send_sec(char *str)
         unsigned char msg[STS_MSG_MAXLEN];
         unsigned char enc[STS_MSG_MAXLEN];
         struct sts_context *ctx = sts_get_ctx();
+
+        if (ctx->status == STS_STOPPED) {
+                ERROR("sts: session not started\n");
+                return -1;
+        }
+
+        if(ctx->encryption == 0) {
+                ERROR("sts: encryption OFF, use 'send_nosec()' instead\n");
+                return -1;
+        }
 
         memset(msg, 0, sizeof(msg));
         memset(enc, 0, sizeof(enc));
@@ -348,19 +368,19 @@ int sts_test_send_nosec(char **message)
 
         memset(msg_out, 0, sizeof(msg_out));
 
+        if (message[1] == NULL) {
+                ERROR("sts: missing param -> 'send [MSG]'\n");
+                return STS_PROMPT;
+        }
+
         if (ctx->status == STS_STOPPED) {
                 ERROR("sts: session not started\n");
-                return STS_PROMPT;
+                return -1;
         }
 
         if (ctx->encryption == 1) {
                 ERROR("sts: encryption ON, use 'sendenc' instead\n");
-                return STS_PROMPT;
-        }
-
-        if (message[1] == NULL) {
-                ERROR("sts: missing param -> 'send [MSG]'\n");
-                return STS_PROMPT;
+                return -1;
         }
 
         /* compute size of msg */
@@ -462,10 +482,9 @@ int sts_status(char **argv)
         INFO("sts: | password:        %s\n", ctx->password);
         INFO("sts: | sub_topic:       %s\n", ctx->topic_sub);
         INFO("sts: | pub_topic:       %s\n", ctx->topic_pub);
-        INFO("sts: | qos:             %u\n", ctx->qos);
+        INFO("sts: | qos:             %u\n", 0);
+        INFO("sts: | clean_session:   %u\n", 1);
         INFO("sts: | client_id:       %s\n", ctx->clientid);
-        INFO("sts: | clean_session:   %u\n", ctx->clean_session);
-        INFO("sts: | is_retained      %u\n", ctx->is_retained);
         INFO("sts: +==========================================+\n");
         INFO("sts: | STS                                      |\n");
         INFO("sts: +==========================================+\n");

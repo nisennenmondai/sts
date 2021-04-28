@@ -3,10 +3,7 @@ MQTT client with end to end encryption for Embedded Linux
 -------
 #### CONFIG files
 Config files provided work just fine.
-- qos           = 0 || 1 || 2
-- is_retained   = 0 || 1
-- clean_session = 0 || 1
-- sts_mode      = nosec || master || slave
+- sts_mode = nosec || master || slave
 
 Those config files use a public MQTT broker, **THERE IS NO PRIVACY PROTECTION**
 - https://www.emqx.io/mqtt/public-mqtt5-broker

@@ -62,10 +62,7 @@ struct sts_message {
 
 struct sts_context {
         unsigned int mqtt_version;
-        unsigned int qos;
         unsigned int port;
-        unsigned int clean_session;
-        unsigned int is_retained;
         unsigned int msg_sent;
         unsigned int msg_recv;
         unsigned int thrd_msg_type;

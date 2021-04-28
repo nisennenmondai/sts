@@ -285,8 +285,6 @@ static int _load_config(const char *config)
                         strcpy(ctx.ip, value);
                 } else if (strcmp(key, "port") == 0) {
                         ctx.port = atoi(value);
-                } else if (strcmp(key, "qos") == 0) {
-                        ctx.qos = atoi(value);
                 } else if (strcmp(key, "username") == 0) {
                         strcpy(ctx.username, value);
                 } else if (strcmp(key, "password") == 0) {
@@ -299,10 +297,6 @@ static int _load_config(const char *config)
                         ctx.mqtt_version = atoi(value);
                 } else if (strcmp(key, "clientid") == 0) {
                         strcpy(ctx.clientid, value);
-                } else if (strcmp(key, "clean_session") == 0) {
-                        ctx.clean_session = atoi(value);
-                } else if (strcmp(key, "is_retained") == 0) {
-                        ctx.is_retained = atoi(value);
                 } else if (strcmp(key, "sts_mode") == 0) {
                         if (strcmp(value, "nosec") == 0) {
                                 strcpy(ctx.sts_mode, value);
@@ -348,10 +342,7 @@ int sts_init(const char *config)
 void sts_reset_ctx(void)
 {
         ctx.mqtt_version = 0;
-        ctx.qos = 0;
         ctx.port = 0;
-        ctx.clean_session = 0;
-        ctx.is_retained = 0;
         ctx.no_print = 0;
         ctx.msg_sent = 0;
         ctx.msg_recv = 0;
@@ -460,7 +451,7 @@ int mqtt_connect(void)
         data.MQTTVersion = ctx.mqtt_version;
         data.clientID.cstring = ctx.clientid;
         data.keepAliveInterval = 0;
-        data.cleansession = ctx.clean_session;
+        data.cleansession = 1;
         data.username.cstring = ctx.username;
         data.password.cstring = ctx.password;
         data.willFlag = 0;
@@ -501,7 +492,7 @@ int mqtt_subscribe(void)
 {
         int ret;
 
-        ret = MQTTSubscribe(&ctx.client, ctx.topic_sub, ctx.qos, 
+        ret = MQTTSubscribe(&ctx.client, ctx.topic_sub, 0, 
                         _mqtt_on_msg_recv);
         if (ret < 0) {
                 return -1;
@@ -534,10 +525,10 @@ int mqtt_publish(char *string)
                 ERROR("sts: publish failed, msg exceed %d\n", STS_MSG_MAXLEN);
                 return -1;
         }
-        msg.qos = ctx.qos;
+        msg.qos = 0;
         msg.payload = (void*)string;
         msg.payloadlen = strlen(string);
-        msg.retained = ctx.is_retained;
+        msg.retained = 0;
 
         ret = MQTTPublish(&ctx.client, ctx.topic_pub, &msg);
         if (ret < 0) {
@@ -565,14 +556,14 @@ int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len)
                 return -1;
         }
 
-        msg.qos = ctx.qos;
+        msg.qos = 0;
         msg.payload = (void*)enc;
         /* we are not sending the size of the actual encrypted data but the size
          * of the original message aligned with ecb_blocksize (16) so if msg
          * was 17 bytes long, we will need 2 ecb blocks (32 bytes). ecb_len is
          * needed for the decrypt function */
         msg.payloadlen = ecb_len;
-        msg.retained = ctx.is_retained;
+        msg.retained = 0;
 
         ret = MQTTPublish(&ctx.client, ctx.topic_pub, &msg);
         if (ret < 0) {
