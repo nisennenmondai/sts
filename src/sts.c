@@ -119,14 +119,12 @@ static void _extract_ids(struct sts_message *msg)
         for (i = 0; i < ID_SIZE - 1; i++) {
                 ctx.id_master[i] = msg->data[i];
         }
-        sts_decode_id((unsigned char*)ctx.id_master, ID_SIZE);
 
         idx = ID_SIZE - 1;
         for (i = 0; i < ID_SIZE + 1; i++) {
                 ctx.id_slave[i] = msg->data[idx];
                 idx++;
         }
-        sts_decode_id((unsigned char*)ctx.id_slave, ID_SIZE);
 }
 
 static void _handlers(struct sts_message *msg)
@@ -386,13 +384,19 @@ static void _mqtt_on_msg_recv(MessageData *data)
 {
         struct sts_message msg;
 
+        /* decode sts message */
+
         /* if sts_init or nosec mode */
         if (ctx.encryption == 0 || strcmp(ctx.sts_mode, "nosec") == 0) {
                 char *msg_inc = NULL;
                 memset(msg.header, 0, sizeof(msg.header));
                 memset(msg.data, 0, sizeof(msg.data));
-                msg_inc = calloc((size_t)data->message->payloadlen + 1, sizeof(char));
-                memcpy(msg_inc, data->message->payload, data->message->payloadlen);
+                sts_decode((unsigned char*)data->message->payload, 
+                                STS_MSG_MAXLEN);
+                msg_inc = calloc((size_t)data->message->payloadlen + 1, 
+                                sizeof(char));
+                memcpy(msg_inc, data->message->payload, 
+                                data->message->payloadlen);
 
                 _parse_msg(msg_inc, &msg);
                 _handlers(&msg);
@@ -610,9 +614,6 @@ int sts_init_sec(void)
 
                 memcpy(ctx.id_master, id_master, sizeof(id_master));
                 memcpy(ctx.id_slave, id_slave, sizeof(id_slave));
-
-                sts_encode_id(id_master, ID_SIZE);
-                sts_encode_id(id_slave, ID_SIZE);
         }
 
         ctx.master_flag = STS_STEP_0;
@@ -650,6 +651,8 @@ int sts_init_sec(void)
                 concatenate(msg_out, "INIT:");
                 concatenate(msg_out, (char*)id_master);
                 concatenate(msg_out, (char*)id_slave);
+                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
@@ -667,6 +670,8 @@ int sts_init_sec(void)
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_AUTHREQ);
                 concatenate(msg_out, ctx.id_slave);
+                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
@@ -686,6 +691,7 @@ int sts_init_sec(void)
                 TRACE("sts: Sending AUTHACK to slave...\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_AUTHACK);
+                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
@@ -714,6 +720,7 @@ int sts_init_sec(void)
                 concatenate(msg_out, master_QX);
                 concatenate(msg_out, "Y");
                 concatenate(msg_out, master_QY);
+                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
@@ -734,6 +741,7 @@ int sts_init_sec(void)
                 TRACE("sts: Sending RDYACK to slave\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_RDYACK);
+                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
@@ -757,6 +765,8 @@ int sts_init_sec(void)
                 TRACE("sts: Sending INITACK to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_INITACK);
+                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
@@ -772,6 +782,8 @@ int sts_init_sec(void)
                 TRACE("sts: Sending AUTHACK to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_AUTHACK);
+                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
@@ -784,6 +796,8 @@ int sts_init_sec(void)
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_AUTHREQ);
                 concatenate(msg_out, ctx.id_master);
+                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
@@ -803,6 +817,8 @@ int sts_init_sec(void)
                 TRACE("sts: Sending RDYACK to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_RDYACK);
+                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
@@ -830,6 +846,8 @@ int sts_init_sec(void)
                 concatenate(msg_out, slave_QX);
                 concatenate(msg_out, "Y");
                 concatenate(msg_out, slave_QY);
+                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {

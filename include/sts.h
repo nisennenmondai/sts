@@ -124,10 +124,10 @@ void sts_decrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input,
                 unsigned char *output, size_t ecb_len);
 int sts_drbg(void *rng_state, unsigned char *output, size_t len);
 /* 
- * this is a simple algorithm as an example so ids aren't human readable when 
- * sent, it is recommended to modify it for your own use.
+ * this is a simple algorithm as an example so msg aren't human readable during
+ * init_sec or nosec mode. it is recommended to modify it for your own use.
  */
-void sts_encode_id(unsigned char *id, size_t size);
-void sts_decode_id(unsigned char *id, size_t size);
+void sts_encode(unsigned char *id, size_t size);
+void sts_decode(unsigned char *id, size_t size);
 
 #endif /* STS_H */
