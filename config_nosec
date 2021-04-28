@@ -10,5 +10,3 @@ clientid      = test_nosec
 is_retained   = 0
 clean_session = 1
 sts_mode      = nosec
-id_master     = null
-id_slave      = null

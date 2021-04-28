@@ -12,12 +12,10 @@ void sts_encode_id(unsigned char *id, size_t size)
 {
         reverse_bits_order(id, size);
         xor_bits(id, size);
-        reverse_bits_order(id, size);
 }
 
 void sts_decode_id(unsigned char *id, size_t size)
 {
-        reverse_bits_order(id, size);
         xor_bits(id, size);
         reverse_bits_order(id, size);
 }

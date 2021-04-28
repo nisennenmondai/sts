@@ -10,5 +10,3 @@ clientid      = test_slave
 is_retained   = 0
 clean_session = 1
 sts_mode      = slave
-id_master     = sd#^$&*^jfh32if
-id_slave      = d$fm%d5-#_-mfls

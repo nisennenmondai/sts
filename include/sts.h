@@ -23,6 +23,7 @@
 /* sec */
 #define BYTE                      8
 #define ECB_BLOCKSIZE             16
+#define ID_SIZE                   32
 #define MPI_STRING_SIZE           128
 #define ECDH_SHARED_KEYSIZE_BITS  256
 #define ECDH_SHARED_KEYSIZE_BYTES ECDH_SHARED_KEYSIZE_BITS / BYTE
@@ -37,6 +38,8 @@
 #define STS_KILL_THREAD 1
 
 /* sts msg types */
+#define STS_INIT     "INIT:"
+#define STS_INITACK  "INITACK:"
 #define STS_AUTHREQ  "AUTHREQ:"
 #define STS_AUTHACK  "AUTHACK:"
 #define STS_RDYREQ   "RDYREQ:"
@@ -50,6 +53,7 @@
 #define STS_STEP_2 2
 #define STS_STEP_3 3
 #define STS_STEP_4 4
+#define STS_STEP_5 5
 
 struct sts_message {
         char header[STS_HEADERSIZE]; /* max header length */
@@ -102,7 +106,7 @@ int sts_init(const char *config);
 int sts_init_sec(void);
 struct sts_context *sts_get_ctx(void);
 
-/* sts commands */
+/* sts cmd */
 int sts_start_session(char **argv);
 int sts_stop_session(char **argv);
 int sts_send_nosec(char *str);
@@ -113,12 +117,16 @@ int sts_status(char **argv);
 int sts_test_send_nosec(char **argv);   /* for tests only */
 int sts_test_send_sec(char **argv);     /* for tests only */
 
-/* security */
+/* sts sec */
 void sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
                 unsigned char *output, size_t size, size_t *ecb_len);
 void sts_decrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
                 unsigned char *output, size_t ecb_len);
 int sts_drbg(void *rng_state, unsigned char *output, size_t len);
+/* 
+ * this is a simple algorithm as an example so ids aren't human readable when 
+ * sent, it is recommended to modify it for your own use.
+ */
 void sts_encode_id(unsigned char *id, size_t size);
 void sts_decode_id(unsigned char *id, size_t size);
 
