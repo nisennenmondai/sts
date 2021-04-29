@@ -23,8 +23,10 @@ LDLIBS += -lm
 .PHONY: all clean
 
 all: $(EXE)
-	mv $(SRC_DIR)/*.o $(OBJ_DIR)
-	mv *.o $(OBJ_DIR)
+	mv $(SRC_DIR)/sec.o $(OBJ_DIR)
+	mv $(SRC_DIR)/sts.o $(OBJ_DIR)
+	mv $(SRC_DIR)/tools.o $(OBJ_DIR)
+	mv $(EXE).o $(OBJ_DIR)
 
 $(EXE): $(OBJ) | $(OBJ_DIR)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@

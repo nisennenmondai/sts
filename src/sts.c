@@ -375,10 +375,25 @@ static void _mqtt_on_msg_recv(MessageData *data)
 {
         struct sts_message msg;
 
-        /* decode sts message */
+        /* if nosec mode */
+        if (strcmp(ctx.sts_mode, "nosec") == 0) {
+                char *msg_inc = NULL;
+                memset(msg.header, 0, sizeof(msg.header));
+                memset(msg.data, 0, sizeof(msg.data));
+                msg_inc = calloc((size_t)data->message->payloadlen + 1, 
+                                sizeof(char));
+                memcpy(msg_inc, data->message->payload, 
+                                data->message->payloadlen);
 
-        /* if sts_init or nosec mode */
-        if (ctx.encryption == 0 || strcmp(ctx.sts_mode, "nosec") == 0) {
+                INFO("[MQTT_INC]: %s\n", msg_inc);
+                ctx.msg_recv++;
+                free(msg_inc);
+        }
+
+        /* if init_sec */
+        if (ctx.encryption == 0 && ctx.status < STS_STEP_5 && (
+                                strcmp(ctx.sts_mode, "master") == 0 || 
+                                strcmp(ctx.sts_mode, "slave") == 0)) {
                 char *msg_inc = NULL;
                 memset(msg.header, 0, sizeof(msg.header));
                 memset(msg.data, 0, sizeof(msg.data));

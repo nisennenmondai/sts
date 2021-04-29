@@ -314,7 +314,6 @@ int sts_send_nosec(char *str)
                 return -1;
         }
 
-        sts_encode((unsigned char*)str, STS_MSG_MAXLEN);
         ret = mqtt_publish(str);
         if (ret < 0) {
                 ERROR("sts: mqtt_publish()\n");
