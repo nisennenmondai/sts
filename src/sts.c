@@ -475,12 +475,11 @@ static void *_mqtt_yield(void *argv)
 {
         (void)argv;
         int ret;
-        INFO("sts: starting mqttyield thread...\n");
+
         while (1) {
                 if (ctx.thrd_msg_type == STS_KILL_THREAD || 
                                 ctx.client.isconnected == 0) {
-                        INFO("sts: stopping mqttyield thread...\n");
-                        INFO("sts: terminating sts client...\n");
+                        INFO("sts: killing mqttyield thread...\n");
                         ctx.thrd_msg_type = 0;
                         ctx.status = STS_STOPPED;
                         return NULL;
@@ -683,7 +682,6 @@ int sts_init_sec(void)
                 ERROR("sts: mbedtls_ecdh_gen_public()\n");
                 return -1;
         }
-        INFO("sts: ecdh keypair generated\n");
 
         /* MASTER SIDE */
         if (strcmp(ctx.sts_mode, "master") == 0) {

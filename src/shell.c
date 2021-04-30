@@ -43,7 +43,7 @@ static int sts_num_builtins(void) {
         return sizeof(builtin_cmd) / sizeof(char *);
 }
 
-static void _sig_hander(int signum)
+static void _sig_handler(int signum)
 {
         struct sts_context *ctx = sts_get_ctx();
 
@@ -52,14 +52,20 @@ static void _sig_hander(int signum)
                 if (ctx->status == STS_STARTED) {
                         sts_stop_session(NULL);
                 }
+                INFO("sts: exiting...\n");
                 exit(0);
         }
 
         if (signum == SIGUSR1) {
-                INFO("sts: closing session now\n");
+                INFO("sts: closing session...\n");
                 if (ctx->status == STS_STARTED) {
                         sts_stop_session(NULL);
                 }
+        }
+
+        if (signum == SIGALRM) {
+                INFO("sts: timer's up, exiting...\n");
+                exit(0);
         }
 }
 
@@ -231,6 +237,7 @@ static void sts_loop(void)
 ////////////////////////////////////////////////////////////////////////////////
 int sts_start_session(char **argv)
 {
+        alarm(30); /* 30 seconds to start session or exit */
         (void)argv;
         int ret;
         struct sts_context *ctx = sts_get_ctx();
@@ -280,11 +287,13 @@ int sts_start_session(char **argv)
                 }
         }
         ctx->status = STS_STARTED;
+        alarm(0);
         return STS_PROMPT;
 }
 
 int sts_stop_session(char **argv)
 {
+        alarm(30); /* 30 seconds to stop session or exit */
         (void)argv;
         int ret;
         struct sts_context *ctx = sts_get_ctx();
@@ -326,6 +335,7 @@ int sts_stop_session(char **argv)
         mqtt_disconnect();
         sts_free_sec();
         sts_reset_ctx();
+        alarm(0);
         return STS_PROMPT;
 }
 
@@ -565,8 +575,9 @@ int sts_exit(char **argv)
 
 int main(void)
 {
-        signal(SIGINT, _sig_hander);
-        signal(SIGUSR1, _sig_hander);
+        signal(SIGINT, _sig_handler);
+        signal(SIGUSR1, _sig_handler);
+        signal(SIGALRM, _sig_handler);
         sts_welcome();
         sts_loop();
         return 0;
