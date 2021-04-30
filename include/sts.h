@@ -38,6 +38,7 @@
 #define STS_KILL_THREAD 1
 
 /* sts msg types */
+#define STS_KILL     "KILL:"
 #define STS_INIT     "INIT:"
 #define STS_INITACK  "INITACK:"
 #define STS_AUTHREQ  "AUTHREQ:"
@@ -47,7 +48,7 @@
 #define STS_HEADERSIZE 10
 #define STS_MSG_MAXLEN 1024
 
-/* sts protocol states */
+/* sts protocole states */
 #define STS_STEP_0 0
 #define STS_STEP_1 1
 #define STS_STEP_2 2
@@ -61,14 +62,16 @@ struct sts_message {
 };
 
 struct sts_context {
+        unsigned int pid;
         unsigned int mqtt_version;
         unsigned int port;
         unsigned int msg_sent;
         unsigned int msg_recv;
         unsigned int thrd_msg_type;
         unsigned short status;
-        unsigned short master_flag;
-        unsigned short slave_flag;
+        volatile unsigned short master_flag;
+        volatile unsigned short slave_flag;
+        volatile unsigned short kill_flag;
         unsigned short no_print;
         unsigned short encryption;
         unsigned char derived_key[ECDH_SHARED_KEYSIZE_BYTES];

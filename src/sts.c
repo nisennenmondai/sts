@@ -11,6 +11,7 @@ static struct sts_context ctx = {
         .status      = STS_STOPPED,
         .master_flag = STS_STEP_0,
         .slave_flag  = STS_STEP_0,
+        .kill_flag   = 0,
         .encryption  = 0,
 };
 
@@ -131,14 +132,37 @@ static void _handlers(struct sts_message *msg)
 {
         int ret;
 
+        /* NOSEC MODE */
+        if (strcmp(ctx.sts_mode, "nosec") == 0) {
+                /* receive KILL from remote client */
+                if (strcmp(msg->header, STS_KILL) == 0) {
+                        /* if pubtopic == subtopic avoid double disc */
+                        if (ctx.kill_flag == 1) {
+                                return;
+                        }
+                        ctx.kill_flag = 1;
+                        INFO("sts: Received KILL from remote client\n");
+                        kill(ctx.pid, SIGUSR1);
+                        return;
+                }
+        }
+
         /* SLAVE SIDE */
         if (strcmp(ctx.sts_mode, "slave") == 0) {
+                /* receive KILL from master */
+                if (strcmp(msg->header, STS_KILL) == 0 && ctx.encryption == 1) {
+                        ctx.kill_flag = 1;
+                        INFO("sts: Received KILL from master\n");
+                        kill(ctx.pid, SIGUSR1);
+                }
+
                 /* receive INIT from master */
                 if (strcmp(msg->header, STS_INIT) == 0 && 
                                 ctx.slave_flag == STS_STEP_0) {
                         TRACE("sts: Received INIT from master\n");
                         _extract_ids(msg);
                         ctx.slave_flag = STS_STEP_1;
+                        return;
                 }
 
                 /* receive AUTHREQ from master*/
@@ -151,9 +175,6 @@ static void _handlers(struct sts_message *msg)
                                 return;
 
                         } else {
-                                DEBUG("sts: ctx.id_master: %s\n", ctx.id_master);
-                                DEBUG("sts: ctx.id_slave: %s\n", ctx.id_slave);
-                                DEBUG("sts: msg->data: %s\n", msg->data);
                                 ERROR("sts: Authentication FAILURE! master "
                                                 "sent wrong ID\n");
                                 return;
@@ -166,6 +187,7 @@ static void _handlers(struct sts_message *msg)
                                 msg->data[0] == '\0') {
                         TRACE("sts: Received AUTHACK from master\n");
                         ctx.slave_flag = STS_STEP_3;
+                        return;
                 }
 
                 /* receive RDYREQ from master */
@@ -201,12 +223,21 @@ static void _handlers(struct sts_message *msg)
 
         /* MASTER SIDE */
         if (strcmp(ctx.sts_mode, "master") == 0) {
+                /* receive KILL from slave */
+                if (strcmp(msg->header, STS_KILL) == 0 && ctx.encryption == 1) {
+                        ctx.kill_flag = 1;
+                        INFO("sts: Received KILL from slave\n");
+                        kill(ctx.pid, SIGUSR1);
+                        return;
+                }
+
                 /* receive INITACK from slave */
                 if (strcmp(msg->header, STS_INITACK) == 0 && 
                                 ctx.master_flag == STS_STEP_0 && 
                                 msg->data[0] == '\0') {
                         TRACE("sts: Receive INITACK from slave\n");
                         ctx.master_flag = STS_STEP_1;
+                        return;
                 }
 
                 /* receive AUTHACK from slave */
@@ -215,6 +246,7 @@ static void _handlers(struct sts_message *msg)
                                 msg->data[0] == '\0') {
                         TRACE("sts: Received AUTHACK from slave\n");
                         ctx.master_flag = STS_STEP_2;
+                        return;
                 }
 
                 /* receive AUTHREQ from slave */
@@ -351,6 +383,7 @@ void sts_reset_ctx(void)
         ctx.status = STS_STOPPED;
         ctx.master_flag = STS_STEP_0;
         ctx.slave_flag = STS_STEP_0;
+        ctx.kill_flag  = 0;
         memset(ctx.derived_key, 0, sizeof(ctx.derived_key));
         memset(ctx.topic_sub, 0, sizeof(ctx.topic_sub));
         memset(ctx.topic_pub, 0, sizeof(ctx.topic_pub));
@@ -374,16 +407,18 @@ struct sts_context *sts_get_ctx(void)
 static void _mqtt_on_msg_recv(MessageData *data)
 {
         struct sts_message msg;
+        memset(msg.header, 0, sizeof(msg.header));
+        memset(msg.data, 0, sizeof(msg.data));
 
         /* if nosec mode */
         if (strcmp(ctx.sts_mode, "nosec") == 0) {
                 char *msg_inc = NULL;
-                memset(msg.header, 0, sizeof(msg.header));
-                memset(msg.data, 0, sizeof(msg.data));
                 msg_inc = calloc((size_t)data->message->payloadlen + 1, 
                                 sizeof(char));
                 memcpy(msg_inc, data->message->payload, 
                                 data->message->payloadlen);
+                _parse_msg(msg_inc, &msg);
+                _handlers(&msg);
 
                 INFO("[MQTT_INC]: %s\n", msg_inc);
                 ctx.msg_recv++;
@@ -395,8 +430,6 @@ static void _mqtt_on_msg_recv(MessageData *data)
                                 strcmp(ctx.sts_mode, "master") == 0 || 
                                 strcmp(ctx.sts_mode, "slave") == 0)) {
                 char *msg_inc = NULL;
-                memset(msg.header, 0, sizeof(msg.header));
-                memset(msg.data, 0, sizeof(msg.data));
                 sts_decode((unsigned char*)data->message->payload, 
                                 STS_MSG_MAXLEN);
                 msg_inc = calloc((size_t)data->message->payloadlen + 1, 
@@ -428,10 +461,13 @@ static void _mqtt_on_msg_recv(MessageData *data)
 
                 sts_decrypt_aes_ecb(&ctx.host_aes_ctx_dec, enc, dec, 
                                 ecb_len);
+
+                _parse_msg((char*)dec, &msg);
+                _handlers(&msg);
+
                 INFO("[MQTT_INC]: %s\n", (char*)dec);
                 ctx.msg_recv++;
                 free(enc);
-                return;
         }
 }
 

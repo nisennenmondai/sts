@@ -43,15 +43,24 @@ static int sts_num_builtins(void) {
         return sizeof(builtin_cmd) / sizeof(char *);
 }
 
-static void _ctrl_c_handler(int arg)
+static void _sig_hander(int signum)
 {
         struct sts_context *ctx = sts_get_ctx();
-        (void)arg;
-        INFO("sts: SIGINT Ctrl-C\n");
-        if (ctx->status == STS_STARTED) {
-                sts_stop_session(NULL);
+
+        if (signum == SIGINT) {
+                INFO("sts: SIGINT Ctrl-C\n");
+                if (ctx->status == STS_STARTED) {
+                        sts_stop_session(NULL);
+                }
+                exit(0);
         }
-        exit(0);
+
+        if (signum == SIGUSR1) {
+                INFO("sts: closing session now\n");
+                if (ctx->status == STS_STARTED) {
+                        sts_stop_session(NULL);
+                }
+        }
 }
 
 static void sts_welcome(void)
@@ -225,6 +234,7 @@ int sts_start_session(char **argv)
         (void)argv;
         int ret;
         struct sts_context *ctx = sts_get_ctx();
+        ctx->pid = getpid();
 
         if (ctx->status == STS_STARTED) {
                 ERROR("sts: a session has already been started already\n");
@@ -282,6 +292,26 @@ int sts_stop_session(char **argv)
         if (ctx->status == STS_STOPPED) {
                 ERROR("sts: session not started\n");
                 return STS_PROMPT;
+        }
+
+        /* flag -> if host rcv KILL msg from remote then no need to send KILL */
+        if (ctx->encryption == 0 && strcmp(ctx->sts_mode, "nosec") == 0 && 
+                        ctx->kill_flag == 0) {
+                INFO("sts: Sending KILL to remote client\n");
+                ctx->kill_flag = 1;
+                ret = sts_send_nosec(STS_KILL);
+                if (ret < 0) {
+                        ERROR("sts: could not send KILL to remote client\n");
+                }
+        }
+
+        if (ctx->encryption == 1 && ctx->kill_flag == 0) {
+                INFO("sts: Sending KILL to remote client\n");
+                ctx->kill_flag = 1;
+                ret = sts_send_sec(STS_KILL);
+                if (ret < 0) {
+                        ERROR("sts: could not send KILL to remote client\n");
+                }
         }
 
         /* kill thread and give it time to close up */
@@ -535,7 +565,8 @@ int sts_exit(char **argv)
 
 int main(void)
 {
-        signal(SIGINT, _ctrl_c_handler);
+        signal(SIGINT, _sig_hander);
+        signal(SIGUSR1, _sig_hander);
         sts_welcome();
         sts_loop();
         return 0;
