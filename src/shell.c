@@ -363,8 +363,8 @@ int sts_send_sec(char *str)
         int ret;
         size_t ecb_len = 0;
         size_t cbc_len = 0;
-        unsigned char msg[STS_DATASIZE];
-        unsigned char enc[STS_DATASIZE];
+        unsigned char msg[STS_MSG_MAXLEN];
+        unsigned char enc[STS_MSG_MAXLEN];
         struct sts_context *ctx = sts_get_ctx();
 
         if (ctx->status == STS_STOPPED) {
@@ -380,38 +380,43 @@ int sts_send_sec(char *str)
         memset(msg, 0, sizeof(msg));
         memset(enc, 0, sizeof(enc));
 
-        memcpy(msg, str, strlen((char*)str));
+        if (ctx->kill_flag == 1) {
+                /* if sending a KILL msg, don't add ENC header */
+                concatenate((char*)msg, str);
 
-        if(ctx->encryption == 1) {
-                if (strcmp(ctx->aes, AES_ECB) == 0) {
-                        ret = sts_encrypt_aes_ecb(&ctx->host_aes_ctx_enc, msg, 
-                                        enc, strlen((char*)msg), &ecb_len);
-                        if (ret != 0) {
-                                ERROR("sts: sts_encrypt_aes_ecb()\n");
-                                return -1;
-                        }
+        } else {
+                concatenate((char*)msg, STS_ENC);
+                concatenate((char*)msg, str);
+        }
 
-                        ret = mqtt_publish_aes_ecb(enc, ecb_len);
-                        if (ret < 0) {
-                                ERROR("sts: mqtt_publish_aes_ecb()\n");
-                                return -1;
-                        }
+        if (strcmp(ctx->aes, AES_ECB) == 0) {
+                ret = sts_encrypt_aes_ecb(&ctx->host_aes_ctx_enc, msg, 
+                                enc, strlen((char*)msg), &ecb_len);
+                if (ret != 0) {
+                        ERROR("sts: sts_encrypt_aes_ecb()\n");
+                        return -1;
                 }
 
-                if (strcmp(ctx->aes, AES_CBC) == 0) {
-                        ret = sts_encrypt_aes_cbc(&ctx->host_aes_ctx_enc, 
-                                        ctx->derived_key, msg, enc, 
-                                        strlen((char*)msg), &cbc_len);
-                        if (ret != 0) {
-                                ERROR("sts: sts_encrypt_aes_cbc()\n");
-                                return -1;
-                        }
+                ret = mqtt_publish_aes_ecb(enc, ecb_len);
+                if (ret < 0) {
+                        ERROR("sts: mqtt_publish_aes_ecb()\n");
+                        return -1;
+                }
+        }
 
-                        ret = mqtt_publish_aes_cbc(enc, cbc_len);
-                        if (ret < 0) {
-                                ERROR("sts: mqtt_publish_aes_cbc()\n");
-                                return -1;
-                        }
+        if (strcmp(ctx->aes, AES_CBC) == 0) {
+                ret = sts_encrypt_aes_cbc(&ctx->host_aes_ctx_enc, 
+                                ctx->derived_key, msg, enc, 
+                                strlen((char*)msg), &cbc_len);
+                if (ret != 0) {
+                        ERROR("sts: sts_encrypt_aes_cbc()\n");
+                        return -1;
+                }
+
+                ret = mqtt_publish_aes_cbc(enc, cbc_len);
+                if (ret < 0) {
+                        ERROR("sts: mqtt_publish_aes_cbc()\n");
+                        return -1;
                 }
         }
         return 0;
@@ -422,15 +427,10 @@ int sts_test_send_nosec(char **message)
         int ret;
         int i = 1;
         size_t msg_size = 0;
-        char msg_out[STS_DATASIZE];
+        char msg_out[STS_MSG_MAXLEN];
         struct sts_context *ctx = sts_get_ctx();
 
         memset(msg_out, 0, sizeof(msg_out));
-
-        if (message[1] == NULL) {
-                ERROR("sts: missing param -> 'send [MSG]'\n");
-                return STS_PROMPT;
-        }
 
         if (ctx->status == STS_STOPPED) {
                 ERROR("sts: session not started\n");
@@ -442,14 +442,19 @@ int sts_test_send_nosec(char **message)
                 return -1;
         }
 
+        if (message[1] == NULL) {
+                ERROR("sts: missing param -> 'send [MSG]'\n");
+                return STS_PROMPT;
+        }
+
         /* compute size of msg */
         while (message[i] != NULL) {
                 msg_size += strlen(message[i] + 1);
                 i++;
         }
 
-        if (msg_size > STS_DATASIZE) {
-                ERROR("sts: message too big, size <= %d\n", STS_DATASIZE);
+        if (msg_size > STS_MSG_MAXLEN) {
+                ERROR("sts: message too big, size <= %d\n", STS_MSG_MAXLEN);
                 return STS_PROMPT;
         }
 

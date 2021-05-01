@@ -17,9 +17,9 @@ void sts_ecdh_aes_cbc_test(void)
         char *msg = "CORE-TEX_LABS: Deadman, PafLeChien, max1point";
         unsigned char host_derived_key[ECDH_KEYSIZE_BYTES];
         unsigned char remote_derived_key[ECDH_KEYSIZE_BYTES];
-        unsigned char message[STS_DATASIZE];
-        unsigned char enc_msg[STS_DATASIZE];
-        unsigned char dec_msg[STS_DATASIZE];
+        unsigned char message[STS_MSG_MAXLEN];
+        unsigned char enc_msg[STS_MSG_MAXLEN];
+        unsigned char dec_msg[STS_MSG_MAXLEN];
 
         mbedtls_ecdh_context host_ecdh_ctx;
         mbedtls_ecdh_context remote_ecdh_ctx;
@@ -107,9 +107,9 @@ void sts_ecdh_aes_cbc_test(void)
         /* 5.0 */
         mbedtls_aes_init(&host_aes_ctx);
         mbedtls_aes_init(&remote_aes_ctx);
-        memset(message, 0, STS_DATASIZE);
-        memset(enc_msg, 0, STS_DATASIZE);
-        memset(dec_msg, 0, STS_DATASIZE);
+        memset(message, 0, STS_MSG_MAXLEN);
+        memset(enc_msg, 0, STS_MSG_MAXLEN);
+        memset(dec_msg, 0, STS_MSG_MAXLEN);
 
         size = strlen(msg);
         memcpy(message, msg, size);

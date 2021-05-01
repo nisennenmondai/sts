@@ -8,6 +8,26 @@
 #include "ctr_drbg.h"
 #include "entropy.h"
 
+int sts_verify_keylen(const unsigned char *buf, size_t size, size_t len)
+{
+        size_t i;
+        size_t keylen;
+        int tmp = 0; 
+
+        for (i = 0 ; i < size; i++) {
+                if (buf[i] == '\0') {
+                        break;
+                }
+                tmp++;
+        }
+        keylen = tmp * BYTE;
+
+        if (keylen != len) {
+                return keylen;
+        } 
+        return 0;
+}
+
 void sts_encode(unsigned char *data, size_t size)
 {
         reverse_bits_order(data, size);

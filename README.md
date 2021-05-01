@@ -35,11 +35,8 @@ Master side
 ### STS Protocole Architecture
 Soon to be done...
 
-### TODO improve security features
-- Nice to have: I want to have digital signature with ECDSA **0%**
-
 ### TODO make beautiful tests
-- I want to have beautiful tests (mqtt, sts, security) **5%**
+- I want to have beautiful tests (mqtt, sts, security) **40%**
 
 ### TODO make beautiful documentation
 - I want to have a beautiful README.md **1%**

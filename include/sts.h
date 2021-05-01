@@ -43,17 +43,18 @@
 #define STS_KILL_THREAD 1
 
 /* sts msg types */
-#define STS_KILL       "KILL:"
 #define STS_INIT       "INIT:"
 #define STS_INITACK    "INITACK:"
 #define STS_AUTHREQ    "AUTHREQ:"
 #define STS_AUTHACK    "AUTHACK:"
 #define STS_RDYREQ     "RDYREQ:"
 #define STS_RDYACK     "RDYACK:"
-#define STS_MSG_MAXLEN 1024
+#define STS_ENC        "ENC:"
+#define STS_KILL       "KILL:"
 
 /* sts msg sizes */
 #define STS_HEADERSIZE 10
+#define STS_MSG_MAXLEN 1024
 #define STS_DATASIZE   STS_MSG_MAXLEN - STS_HEADERSIZE
 
 /* sts modes */
@@ -143,6 +144,9 @@ int sts_encrypt_aes_cbc(mbedtls_aes_context *ctx, unsigned char *iv,
 int sts_decrypt_aes_cbc(mbedtls_aes_context *ctx, unsigned char *iv, 
                 unsigned char *input, unsigned char *output, size_t cbc_len);
 int sts_drbg(void *rng_state, unsigned char *output, size_t len);
+
+
+int sts_verify_keylen(const unsigned char *buf, size_t size, size_t len);
 /* 
  * this is a simple algorithm as an example so msg aren't human readable during
  * init_sec. it is recommended to modify it for your own use.
