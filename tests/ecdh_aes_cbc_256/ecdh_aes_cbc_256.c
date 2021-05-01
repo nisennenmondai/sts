@@ -3,14 +3,14 @@
 
 #define NUMBER_TESTS 13
 
-void sts_ecdh_aes_ecb_test(void)
+void sts_ecdh_aes_cbc_test(void)
 {
         TESTS("+================================================+\n");
-        TESTS("|            ECDH SECP256K1 - AES-ECB            |\n");
+        TESTS("|            ECDH SECP256K1 - AES-CBC            |\n");
         TESTS("+================================================+\n");
         size_t size;
         size_t olen;
-        size_t ecb_len;
+        size_t cbc_len;
         int ret;
         int count = 0;
 
@@ -104,7 +104,7 @@ void sts_ecdh_aes_ecb_test(void)
                 TESTS("test 4.1: mbedtls_ecdh_calc_secret remote OK!\n");
         }
 
-        /* test 5.0 */
+        /* 5.0 */
         mbedtls_aes_init(&host_aes_ctx);
         mbedtls_aes_init(&remote_aes_ctx);
         memset(message, 0, STS_DATASIZE);
@@ -113,6 +113,8 @@ void sts_ecdh_aes_ecb_test(void)
 
         size = strlen(msg);
         memcpy(message, msg, size);
+
+
         ret = mbedtls_aes_setkey_enc(&host_aes_ctx, host_derived_key,
                         ECDH_KEYSIZE_BITS);
         if (ret != 0) {
@@ -131,23 +133,25 @@ void sts_ecdh_aes_ecb_test(void)
                 TESTS("test 5.1: mbedtls_aes_setkey_enc remote OK!\n");
         }
 
-        ret = sts_encrypt_aes_ecb(&host_aes_ctx, message, enc_msg, size, &ecb_len);
+        ret = sts_encrypt_aes_cbc(&host_aes_ctx, host_derived_key, message, enc_msg, 
+                        size, &cbc_len);
         if (ret != 0) {
-                TESTS("test 6.0: sts_encrypt_aes_ecb FAILED\n");
+                TESTS("test 6.0: sts_encrypt_aes_cbc FAILED\n");
         } else {
                 count++;
-                TESTS("test 6.0: sts_encrypt_aes_ecb OK\n");
+                TESTS("test 6.0: sts_encrypt_aes_cbc OK\n");
         }
 
-        ret = sts_decrypt_aes_ecb(&remote_aes_ctx, enc_msg, dec_msg, ecb_len);
+        ret = sts_decrypt_aes_cbc(&remote_aes_ctx, remote_derived_key, enc_msg, 
+                        dec_msg, cbc_len);
         if (ret != 0) {
-                TESTS("test 6.1: sts_decrypt_aes_ecb FAILED\n");
+                TESTS("test 6.1: sts_decrypt_aes_cbc FAILED\n");
         } else {
                 count++;
                 TESTS("test 6.1: sts_decrypt_aes_cbc OK\n");
         }
 
-        /* test 6.0 */
+        /* test 7.0 */
         ret = strcmp((char*)message, (char*)dec_msg);
         if (ret < 0) {
                 TESTS("test 7.0: encryption - decryption FAILED!\n");
@@ -157,10 +161,10 @@ void sts_ecdh_aes_ecb_test(void)
         }
 
         /* free */
-        mbedtls_ecdh_free(&host_ecdh_ctx);
-        mbedtls_ecdh_free(&remote_ecdh_ctx);
         mbedtls_aes_free(&host_aes_ctx);
         mbedtls_aes_free(&remote_aes_ctx);
+        mbedtls_ecdh_free(&host_ecdh_ctx);
+        mbedtls_ecdh_free(&remote_ecdh_ctx);
 
         if (count == NUMBER_TESTS) {
                 TESTS("TESTS PASSED: %d/%d\n", count, NUMBER_TESTS);
@@ -171,5 +175,5 @@ void sts_ecdh_aes_ecb_test(void)
 
 int main(void)
 {
-        sts_ecdh_aes_ecb_test();
+        sts_ecdh_aes_cbc_test();
 }

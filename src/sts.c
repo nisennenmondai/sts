@@ -8,11 +8,17 @@
 /* VARIABLES */
 ////////////////////////////////////////////////////////////////////////////////
 static struct sts_context ctx = {
-        .status      = STS_STOPPED,
-        .master_flag = STS_STEP_0,
-        .slave_flag  = STS_STEP_0,
-        .kill_flag   = 0,
-        .encryption  = 0,
+        .mqtt_version   = 0,
+        .port           = 0,
+        .no_print       = 0,
+        .msg_sent       = 0,
+        .msg_recv       = 0,
+        .thrd_msg_type  = 0,
+        .encryption     = 0,
+        .kill_flag      = 0,
+        .status         = STS_STOPPED,
+        .master_flag    = STS_STEP_0,
+        .slave_flag     = STS_STEP_0,
 };
 
 static unsigned char sendbuff[SENDBUFFSIZE];
@@ -23,6 +29,87 @@ static pthread_t _mqttyield_thrd_pid;
 ////////////////////////////////////////////////////////////////////////////////
 /* STS */
 ////////////////////////////////////////////////////////////////////////////////
+static int _load_config(const char *config)
+{
+        FILE *fp;
+
+        fp = fopen(config, "r");
+        if (fp == NULL)
+        {
+                ERROR("sts: while opening config file -> start [FILE]\n");
+                return -1;
+        }
+
+        char key[CONF_KEY_MAXLEN] = {0};
+        char cmp[2] = {0};
+        char value[CONF_VAL_MAXLEN] = {0};
+
+        while (fscanf(fp, "%s %s %s ", key, cmp, value) != EOF) {
+                if (strcmp(key, "mqtt_version") == 0) {
+                        ctx.mqtt_version = atoi(value);
+                } else if (strcmp(key, "ip") == 0) {
+                        strcpy(ctx.ip, value);
+                } else if (strcmp(key, "port") == 0) {
+                        ctx.port = atoi(value);
+                } else if (strcmp(key, "username") == 0) {
+                        strcpy(ctx.username, value);
+                } else if (strcmp(key, "password") == 0) {
+                        strcpy(ctx.password, value);
+                } else if (strcmp(key, "subtop") == 0) {
+                        strcpy(ctx.topic_sub, value);
+                } else if (strcmp(key, "pubtop") == 0) {
+                        strcpy(ctx.topic_pub, value);
+                } else if (strcmp(key, "clientid") == 0) {
+                        strcpy(ctx.clientid, value);
+                } else if (strcmp(key, "sts_mode") == 0) {
+                        /* if nosec mode then aes = null */
+                        if (strcmp(value,STS_NOSEC) == 0) {
+                                strcpy(ctx.sts_mode, value);
+                                strcpy(ctx.aes, AES_NULL);
+                                fclose(fp);
+                                config = NULL;
+                                return 0;
+
+                        } else if (strcmp(value, STS_SECMASTER) == 0) {
+                                strcpy(ctx.sts_mode, value);
+                        } else if (strcmp(value, STS_SECSLAVE) == 0) {
+                                strcpy(ctx.sts_mode, value);
+                        } else {
+                                ERROR("sts: wrong value for sts_mode "
+                                                "nosec | master | slave\n");
+                                fclose(fp);
+                                config = NULL;
+                                return -1;
+                        }
+
+                } else if (strcmp(key, "aes") == 0) {
+                        if (strcmp(value, AES_NULL) == 0) {
+                                strcpy(ctx.aes, value);
+                        } else if (strcmp(value, AES_ECB) == 0) {
+                                strcpy(ctx.aes, value);
+                        } else if (strcmp(value, AES_CBC) == 0) {
+                                strcpy(ctx.aes, value);
+                        } else {
+                                ERROR("sts: wrong value for aes "
+                                                "null | ecb | cbc\n");
+                                fclose(fp);
+                                config = NULL;
+                                return -1;
+                        }
+
+                } else {
+                        ERROR("sts: wrong key(s) in config file, please "
+                                        "check 'config_' examples\n");
+                        fclose(fp);
+                        config = NULL;
+                        return -1;
+                }
+        }
+        fclose(fp);
+        config = NULL;
+        return 0;
+}
+
 static void _extract_pubkey(char *X, char *Y, struct sts_message *msg)
 {
         int i;
@@ -30,7 +117,7 @@ static void _extract_pubkey(char *X, char *Y, struct sts_message *msg)
         int idx_Y = 0;
 
         /* extract slave public key X */
-        for (i = 0; i < STS_MSG_MAXLEN; i++) {
+        for (i = 0; i < STS_DATASIZE; i++) {
                 if (msg->data[i] == 'Y') {
                         idx_X = idx_X - 1;
                         break;
@@ -40,7 +127,7 @@ static void _extract_pubkey(char *X, char *Y, struct sts_message *msg)
         memcpy(X, &msg->data[1], idx_X * sizeof(char));
 
         /* extract slave public key Y */
-        for (i = idx_X + 2; i < STS_MSG_MAXLEN; i++) {
+        for (i = idx_X + 2; i < STS_DATASIZE; i++) {
                 if (msg->data[i] == '\0') {
                         idx_Y = idx_Y + 1;
                         break;
@@ -65,7 +152,7 @@ static void _parse_msg(char *inc, struct sts_message *msg)
         }
 
         /* extract data */
-        for (i = 0; i < STS_MSG_MAXLEN; i++) {
+        for (i = 0; i < STS_DATASIZE; i++) {
                 if (inc[idx + i] != '\0') {
                         msg->data[i] = inc[idx + i];
                 } 
@@ -98,14 +185,14 @@ static int _compute_shared_secret(char *master_QX, char *master_QY)
         }
 
         ret = mbedtls_aes_setkey_enc(&ctx.host_aes_ctx_enc, ctx.derived_key,
-                        ECDH_SHARED_KEYSIZE_BITS);
+                        ECDH_KEYSIZE_BITS);
         if (ret != 0) {
                 ERROR("sts: mbedtls_aes_setkey_enc()\n");
                 return -1;
         }
 
         ret = mbedtls_aes_setkey_dec(&ctx.host_aes_ctx_dec, ctx.derived_key,
-                        ECDH_SHARED_KEYSIZE_BITS);
+                        ECDH_KEYSIZE_BITS);
         if (ret != 0) {
                 ERROR("sts: mbedtls_aes_setkey_dec()\n");
                 return -1;
@@ -133,7 +220,7 @@ static void _handlers(struct sts_message *msg)
         int ret;
 
         /* SLAVE SIDE */
-        if (strcmp(ctx.sts_mode, "slave") == 0) {
+        if (strcmp(ctx.sts_mode, STS_SECSLAVE) == 0) {
                 /* receive KILL from master */
                 if (strcmp(msg->header, STS_KILL) == 0 && ctx.encryption == 1) {
                         ctx.kill_flag = 1;
@@ -207,7 +294,7 @@ static void _handlers(struct sts_message *msg)
         }
 
         /* MASTER SIDE */
-        if (strcmp(ctx.sts_mode, "master") == 0) {
+        if (strcmp(ctx.sts_mode, STS_SECMASTER) == 0) {
                 /* receive KILL from slave */
                 if (strcmp(msg->header, STS_KILL) == 0 && ctx.encryption == 1) {
                         ctx.kill_flag = 1;
@@ -282,63 +369,6 @@ static void _handlers(struct sts_message *msg)
         }
 }
 
-static int _load_config(const char *config)
-{
-        FILE *fp;
-
-        fp = fopen(config, "r");
-        if (fp == NULL)
-        {
-                ERROR("sts: while opening config file -> start [FILE]\n");
-                return -1;
-        }
-
-        char key[CONFIG_KEY_MAXLENGTH] = {0};
-        char cmp[2] = {0};
-        char value[CONFIG_VALUE_MAXLENGTH] = {0};
-
-        while (fscanf(fp, "%s %s %s ", key, cmp, value) != EOF) {
-                if (strcmp(key, "ip") == 0) {
-                        strcpy(ctx.ip, value);
-                } else if (strcmp(key, "port") == 0) {
-                        ctx.port = atoi(value);
-                } else if (strcmp(key, "username") == 0) {
-                        strcpy(ctx.username, value);
-                } else if (strcmp(key, "password") == 0) {
-                        strcpy(ctx.password, value);
-                } else if (strcmp(key, "subtop") == 0) {
-                        strcpy(ctx.topic_sub, value);
-                } else if (strcmp(key, "pubtop") == 0) {
-                        strcpy(ctx.topic_pub, value);
-                } else if (strcmp(key, "mqtt_version") == 0) {
-                        ctx.mqtt_version = atoi(value);
-                } else if (strcmp(key, "clientid") == 0) {
-                        strcpy(ctx.clientid, value);
-                } else if (strcmp(key, "sts_mode") == 0) {
-                        if (strcmp(value, "nosec") == 0) {
-                                strcpy(ctx.sts_mode, value);
-                        } else if (strcmp(value, "master") == 0) {
-                                strcpy(ctx.sts_mode, value);
-                        } else if (strcmp(value, "slave") == 0) {
-                                strcpy(ctx.sts_mode, value);
-                        } else {
-                                ERROR("sts: wrong value for sts_mode "
-                                                "set to nosec by default\n");
-                                strcpy(ctx.sts_mode, "nosec");
-                        }
-                } else {
-                        ERROR("sts: wrong key in config file, please "
-                                        "see 'template_config'\n");
-                        fclose(fp);
-                        config = NULL;
-                        return -1;
-                }
-        }
-        fclose(fp);
-        config = NULL;
-        return 0;
-}
-
 int sts_init(const char *config)
 {
         int ret;
@@ -358,27 +388,28 @@ int sts_init(const char *config)
 
 void sts_reset_ctx(void)
 {
-        ctx.mqtt_version = 0;
-        ctx.port = 0;
-        ctx.no_print = 0;
-        ctx.msg_sent = 0;
-        ctx.msg_recv = 0;
+        ctx.mqtt_version  = 0;
+        ctx.port          = 0;
+        ctx.no_print      = 0;
+        ctx.msg_sent      = 0;
+        ctx.msg_recv      = 0;
         ctx.thrd_msg_type = 0;
-        ctx.encryption = 0;
-        ctx.status = STS_STOPPED;
-        ctx.master_flag = STS_STEP_0;
-        ctx.slave_flag = STS_STEP_0;
-        ctx.kill_flag  = 0;
+        ctx.encryption    = 0;
+        ctx.kill_flag     = 0;
+        ctx.status        = STS_STOPPED;
+        ctx.master_flag   = STS_STEP_0;
+        ctx.slave_flag    = STS_STEP_0;
         memset(ctx.derived_key, 0, sizeof(ctx.derived_key));
-        memset(ctx.topic_sub, 0, sizeof(ctx.topic_sub));
-        memset(ctx.topic_pub, 0, sizeof(ctx.topic_pub));
-        memset(ctx.clientid, 0, sizeof(ctx.clientid));
-        memset(ctx.username, 0, sizeof(ctx.username));
-        memset(ctx.password, 0, sizeof(ctx.password));
-        memset(ctx.id_master, 0, sizeof(ctx.id_master));
-        memset(ctx.id_slave, 0, sizeof(ctx.id_slave));
-        memset(ctx.sts_mode, 0, sizeof(ctx.sts_mode));
-        memset(ctx.ip, 0, sizeof(ctx.ip));
+        memset(ctx.topic_sub,   0, sizeof(ctx.topic_sub));
+        memset(ctx.topic_pub,   0, sizeof(ctx.topic_pub));
+        memset(ctx.clientid,    0, sizeof(ctx.clientid));
+        memset(ctx.username,    0, sizeof(ctx.username));
+        memset(ctx.password,    0, sizeof(ctx.password));
+        memset(ctx.id_master,   0, sizeof(ctx.id_master));
+        memset(ctx.id_slave,    0, sizeof(ctx.id_slave));
+        memset(ctx.sts_mode,    0, sizeof(ctx.sts_mode));
+        memset(ctx.aes,         0, sizeof(ctx.aes));
+        memset(ctx.ip,          0, sizeof(ctx.ip));
 }
 
 struct sts_context *sts_get_ctx(void)
@@ -396,7 +427,7 @@ static void _mqtt_on_msg_recv(MessageData *data)
         memset(msg.data, 0, sizeof(msg.data));
 
         /* if nosec mode */
-        if (strcmp(ctx.sts_mode, "nosec") == 0) {
+        if (strcmp(ctx.sts_mode, STS_NOSEC) == 0) {
                 char *msg_inc = NULL;
                 msg_inc = calloc((size_t)data->message->payloadlen + 1, 
                                 sizeof(char));
@@ -412,11 +443,11 @@ static void _mqtt_on_msg_recv(MessageData *data)
 
         /* if init_sec */
         if (ctx.encryption == 0 && ctx.status < STS_STEP_5 && (
-                                strcmp(ctx.sts_mode, "master") == 0 || 
-                                strcmp(ctx.sts_mode, "slave") == 0)) {
+                                strcmp(ctx.sts_mode, STS_SECMASTER) == 0 || 
+                                strcmp(ctx.sts_mode, STS_SECSLAVE) == 0)) {
                 char *msg_inc = NULL;
                 sts_decode((unsigned char*)data->message->payload, 
-                                STS_MSG_MAXLEN);
+                                STS_DATASIZE);
                 msg_inc = calloc((size_t)data->message->payloadlen + 1, 
                                 sizeof(char));
                 memcpy(msg_inc, data->message->payload, 
@@ -426,7 +457,7 @@ static void _mqtt_on_msg_recv(MessageData *data)
                 _handlers(&msg);
 
                 /* only print in nosec mode */
-                if (strcmp(ctx.sts_mode, "nosec") == 0) {
+                if (strcmp(ctx.sts_mode, STS_NOSEC) == 0) {
                         INFO("[MQTT_INC]: %s\n", msg_inc);
                 }
                 ctx.msg_recv++;
@@ -435,17 +466,39 @@ static void _mqtt_on_msg_recv(MessageData *data)
 
         if (ctx.encryption == 1) {
                 unsigned char *enc = NULL;
-                unsigned char dec[STS_MSG_MAXLEN];
+                unsigned char dec[STS_DATASIZE];
                 size_t ecb_len;
+                size_t cbc_len;
+                int ret;
                 enc = calloc((size_t)data->message->payloadlen, 
                                 sizeof(unsigned char));
-                ecb_len = data->message->payloadlen;
                 memcpy(enc, data->message->payload, 
                                 data->message->payloadlen);
                 memset(dec, 0, sizeof(dec));
 
-                sts_decrypt_aes_ecb(&ctx.host_aes_ctx_dec, enc, dec, 
-                                ecb_len);
+                if (strcmp(ctx.aes, AES_ECB) == 0) {
+                        ecb_len = data->message->payloadlen;
+                        ret = sts_decrypt_aes_ecb(&ctx.host_aes_ctx_dec, 
+                                        enc, dec, ecb_len);
+                        if (ret != 0) {
+                                ERROR("sts: sts_decrypt_aes_ecb()\n");
+                                ctx.msg_recv++;
+                                free(enc);
+                                return;
+                        }
+                }
+
+                if (strcmp(ctx.aes, AES_CBC) == 0) {
+                        cbc_len = data->message->payloadlen;
+                        ret = sts_decrypt_aes_cbc(&ctx.host_aes_ctx_dec, 
+                                        ctx.derived_key, enc, dec, cbc_len);
+                        if (ret != 0) {
+                                ERROR("sts: sts_decrypt_aes_ecb()\n");
+                                ctx.msg_recv++;
+                                free(enc);
+                                return;
+                        }
+                }
 
                 _parse_msg((char*)dec, &msg);
                 _handlers(&msg);
@@ -556,8 +609,8 @@ int mqtt_publish(char *string)
         int ret;
         MQTTMessage msg;
 
-        if (strlen(string) > STS_MSG_MAXLEN) {
-                ERROR("sts: publish failed, msg exceed %d\n", STS_MSG_MAXLEN);
+        if (strlen(string) > STS_DATASIZE) {
+                ERROR("sts: publish failed, msg > %d\n", STS_DATASIZE);
                 return -1;
         }
         msg.qos = 0;
@@ -585,9 +638,8 @@ int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len)
         int ret;
         MQTTMessage msg;
 
-        if (ecb_len > STS_MSG_MAXLEN) {
-                ERROR("sts: mqtt_publish_aes_ecb, msg exceed %d\n", 
-                                STS_MSG_MAXLEN);
+        if (ecb_len > STS_DATASIZE) {
+                ERROR("sts: mqtt_publish_aes_ecb, msg > %d\n", STS_DATASIZE);
                 return -1;
         }
 
@@ -615,6 +667,41 @@ int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len)
         return 0;
 }
 
+
+int mqtt_publish_aes_cbc(unsigned char *enc, size_t cbc_len)
+{
+        int ret;
+        MQTTMessage msg;
+
+        if (cbc_len > STS_DATASIZE) {
+                ERROR("sts: mqtt_publish_aes_cbc, msg > %d\n", STS_DATASIZE);
+                return -1;
+        }
+
+        msg.qos = 0;
+        msg.payload = (void*)enc;
+        /* we are not sending the size of the actual encrypted data but the size
+         * of the original message aligned with ecb_blocksize (16) so if msg
+         * was 17 bytes long, we will need 2 ecb blocks (32 bytes). ecb_len is
+         * needed for the decrypt function */
+        msg.payloadlen = cbc_len;
+        msg.retained = 0;
+
+        ret = MQTTPublish(&ctx.client, ctx.topic_pub, &msg);
+        if (ret < 0) {
+                mqtt_disconnect();
+                return -1;
+        }
+
+        /* echo */
+        if (ctx.no_print == 0) {
+                INFO("[MQTTOUT]: %s\n", enc);
+        }
+        ctx.no_print = 0;
+        ctx.msg_sent++;
+        return 0;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /* STS SECURITY */
 ////////////////////////////////////////////////////////////////////////////////
@@ -622,7 +709,7 @@ int sts_init_sec(void)
 {
         int ret;
         size_t olen = 0;
-        char msg_out[STS_MSG_MAXLEN];
+        char msg_out[STS_DATASIZE];
         char slave_QX[MPI_STRING_SIZE];
         char slave_QY[MPI_STRING_SIZE];
         char master_QX[MPI_STRING_SIZE];
@@ -631,7 +718,7 @@ int sts_init_sec(void)
         unsigned char id_slave[ID_SIZE];
 
         /* generate ids on master side */
-        if (strcmp(ctx.sts_mode, "master") == 0) {
+        if (strcmp(ctx.sts_mode, STS_SECMASTER) == 0) {
                 memset(id_master, 0, sizeof(id_master));
                 memset(id_slave, 0, sizeof(id_slave));
 
@@ -669,14 +756,14 @@ int sts_init_sec(void)
         }
 
         /* MASTER SIDE */
-        if (strcmp(ctx.sts_mode, "master") == 0) {
+        if (strcmp(ctx.sts_mode, STS_SECMASTER) == 0) {
                 /* send INIT to slave */
                 TRACE("sts: Sending INIT to slave\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, "INIT:");
                 concatenate(msg_out, (char*)id_master);
                 concatenate(msg_out, (char*)id_slave);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_encode((unsigned char*)msg_out, STS_DATASIZE);
 
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
@@ -695,7 +782,7 @@ int sts_init_sec(void)
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_AUTHREQ);
                 concatenate(msg_out, ctx.id_slave);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_encode((unsigned char*)msg_out, STS_DATASIZE);
 
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
@@ -716,7 +803,7 @@ int sts_init_sec(void)
                 TRACE("sts: Sending AUTHACK to slave...\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_AUTHACK);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_encode((unsigned char*)msg_out, STS_DATASIZE);
 
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
@@ -745,7 +832,7 @@ int sts_init_sec(void)
                 concatenate(msg_out, master_QX);
                 concatenate(msg_out, "Y");
                 concatenate(msg_out, master_QY);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_encode((unsigned char*)msg_out, STS_DATASIZE);
 
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
@@ -766,7 +853,7 @@ int sts_init_sec(void)
                 TRACE("sts: Sending RDYACK to slave\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_RDYACK);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_encode((unsigned char*)msg_out, STS_DATASIZE);
 
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
@@ -781,7 +868,7 @@ int sts_init_sec(void)
         }
 
         /* SLAVE SIDE */
-        if (strcmp(ctx.sts_mode, "slave") == 0) {
+        if (strcmp(ctx.sts_mode, STS_SECSLAVE) == 0) {
                 /* wait INIT from master */
                 TRACE("sts: Waiting INIT from master\n");
                 while (ctx.slave_flag == STS_STEP_0) {};
@@ -790,7 +877,7 @@ int sts_init_sec(void)
                 TRACE("sts: Sending INITACK to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_INITACK);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_encode((unsigned char*)msg_out, STS_DATASIZE);
 
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
@@ -807,7 +894,7 @@ int sts_init_sec(void)
                 TRACE("sts: Sending AUTHACK to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_AUTHACK);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_encode((unsigned char*)msg_out, STS_DATASIZE);
 
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
@@ -821,7 +908,7 @@ int sts_init_sec(void)
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_AUTHREQ);
                 concatenate(msg_out, ctx.id_master);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_encode((unsigned char*)msg_out, STS_DATASIZE);
 
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
@@ -842,7 +929,7 @@ int sts_init_sec(void)
                 TRACE("sts: Sending RDYACK to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_RDYACK);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_encode((unsigned char*)msg_out, STS_DATASIZE);
 
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);
@@ -871,7 +958,7 @@ int sts_init_sec(void)
                 concatenate(msg_out, slave_QX);
                 concatenate(msg_out, "Y");
                 concatenate(msg_out, slave_QY);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_encode((unsigned char*)msg_out, STS_DATASIZE);
 
                 ctx.no_print = 1;
                 ret = mqtt_publish(msg_out);

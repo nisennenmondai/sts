@@ -55,54 +55,93 @@ cleanup:
         return ret;
 }
 
-void sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
+int sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
                 unsigned char *output, size_t size, size_t *ecb_len)
 {
         int i;
+        int ret;
         int iter;
-        size_t tmp = 0;
-        unsigned char *p_input = input;
-        unsigned char *p_output = output;
+        unsigned char *p_in = input;
+        unsigned char *p_out = output;
 
         /* compute ecb_len */
         if (size < ECB_BLOCKSIZE) {
-                tmp = ECB_BLOCKSIZE;
+                *ecb_len = ECB_BLOCKSIZE;
         } 
         if (size > ECB_BLOCKSIZE && size % ECB_BLOCKSIZE > 0) {
-                tmp = (ECB_BLOCKSIZE - (size % ECB_BLOCKSIZE)) + size;
+                *ecb_len = (ECB_BLOCKSIZE - (size % ECB_BLOCKSIZE)) + size;
 
         } 
         if (size % ECB_BLOCKSIZE == 0) {
-                tmp = size;
+                *ecb_len = size;
         }
 
         /* compute nbr of iterations */
-        *ecb_len = tmp;
-        iter = tmp / ECB_BLOCKSIZE;
+        iter = *ecb_len / ECB_BLOCKSIZE;
 
         for (i = 0; i < iter; i++) {
-                mbedtls_aes_crypt_ecb(ctx, MBEDTLS_AES_ENCRYPT, 
-                                p_input, p_output);
-                p_input += ECB_BLOCKSIZE;
-                p_output += ECB_BLOCKSIZE;
+                ret = mbedtls_aes_crypt_ecb(ctx, MBEDTLS_AES_ENCRYPT, p_in, p_out);
+                if (ret != 0) {
+                        return ret;
+                }
+                p_in += ECB_BLOCKSIZE;
+                p_out += ECB_BLOCKSIZE;
         }
+        return 0;
 }
 
-void sts_decrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
+int sts_decrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
                 unsigned char *output, size_t ecb_len)
 {
         int i;
+        int ret;
         int iter;
-        unsigned char *p_input = input;
-        unsigned char *p_output = output;
+        unsigned char *p_in = input;
+        unsigned char *p_out = output;
 
         /* compute nbr of iterations */
         iter = ecb_len / ECB_BLOCKSIZE;
 
         for (i = 0; i < iter; i++) {
-                mbedtls_aes_crypt_ecb(ctx, MBEDTLS_AES_DECRYPT, 
-                                p_input, p_output);
-                p_input += ECB_BLOCKSIZE;
-                p_output += ECB_BLOCKSIZE;
+                ret = mbedtls_aes_crypt_ecb(ctx, MBEDTLS_AES_DECRYPT, p_in, p_out);
+                if (ret != 0) {
+                        return ret;
+                }
+                p_in += ECB_BLOCKSIZE;
+                p_out += ECB_BLOCKSIZE;
         }
+        return 0;
+}
+
+int sts_encrypt_aes_cbc(mbedtls_aes_context *ctx, unsigned char *iv, 
+                unsigned char *input, unsigned char *output, 
+                size_t size, size_t *cbc_len)
+{
+        int ret;
+
+        /* compute ecb_len */
+        if (size < CBC_BLOCKSIZE) {
+                *cbc_len = CBC_BLOCKSIZE;
+        } 
+        if (size > CBC_BLOCKSIZE && size % CBC_BLOCKSIZE > 0) {
+                *cbc_len = (CBC_BLOCKSIZE - (size % CBC_BLOCKSIZE)) + size;
+
+        } 
+        if (size % CBC_BLOCKSIZE == 0) {
+                *cbc_len = size;
+        }
+
+        ret = mbedtls_aes_crypt_cbc(ctx, MBEDTLS_AES_ENCRYPT, *cbc_len, iv, 
+                        input, output);
+        return ret;
+}
+
+int sts_decrypt_aes_cbc(mbedtls_aes_context *ctx, unsigned char *iv, 
+                unsigned char *input, unsigned char *output, size_t cbc_len)
+{
+        int ret;
+
+        ret = mbedtls_aes_crypt_cbc(ctx, MBEDTLS_AES_DECRYPT, cbc_len, iv, 
+                        input, output);
+        return ret;
 }

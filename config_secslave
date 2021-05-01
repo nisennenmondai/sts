@@ -7,3 +7,4 @@ subtop   = m2s
 pubtop   = s2m
 clientid = test_slave
 sts_mode = slave
+aes      = cbc

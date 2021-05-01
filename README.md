@@ -4,6 +4,7 @@ MQTT client with end to end encryption for Embedded Linux
 #### CONFIG files
 Config files provided work just fine.
 - sts_mode = nosec || master || slave
+- aes = null || ecb || cbc
 
 Those config files use a public MQTT broker, **THERE IS NO PRIVACY PROTECTION**
 - https://www.emqx.io/mqtt/public-mqtt5-broker
@@ -35,7 +36,6 @@ Master side
 Soon to be done...
 
 ### TODO improve security features
-- I want to support a better AES CBC **0%**
 - Nice to have: I want to have digital signature with ECDSA **0%**
 
 ### TODO make beautiful tests

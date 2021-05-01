@@ -280,8 +280,8 @@ int sts_start_session(char **argv)
                 return STS_PROMPT;
         }
 
-        if (strcmp(ctx->sts_mode, "master") == 0 || 
-                        strcmp(ctx->sts_mode, "slave") == 0) {
+        if (strcmp(ctx->sts_mode, STS_SECMASTER) == 0 || 
+                        strcmp(ctx->sts_mode, STS_SECSLAVE) == 0) {
                 ret = sts_init_sec();
                 if (ret < 0) {
                         ERROR("sts: while initializing security\n");
@@ -298,7 +298,7 @@ int sts_start_session(char **argv)
 
 int sts_stop_session(char **argv)
 {
-        alarm(30); /* 30 seconds to stop session or exit */
+        alarm(10); /* 10 seconds to stop session or exit */
         (void)argv;
         int ret;
         struct sts_context *ctx = sts_get_ctx();
@@ -320,7 +320,7 @@ int sts_stop_session(char **argv)
 
         /* kill thread and give it time to close up */
         ctx->thrd_msg_type = STS_KILL_THREAD;
-        usleep(500000);
+        sleep(1);
 
         ret = mqtt_unsubscribe();
         if (ret < 0) {
@@ -362,8 +362,9 @@ int sts_send_sec(char *str)
 {
         int ret;
         size_t ecb_len = 0;
-        unsigned char msg[STS_MSG_MAXLEN];
-        unsigned char enc[STS_MSG_MAXLEN];
+        size_t cbc_len = 0;
+        unsigned char msg[STS_DATASIZE];
+        unsigned char enc[STS_DATASIZE];
         struct sts_context *ctx = sts_get_ctx();
 
         if (ctx->status == STS_STOPPED) {
@@ -381,13 +382,37 @@ int sts_send_sec(char *str)
 
         memcpy(msg, str, strlen((char*)str));
 
-        sts_encrypt_aes_ecb(&ctx->host_aes_ctx_enc, msg, enc, 
-                        strlen((char*)msg), &ecb_len);
+        if(ctx->encryption == 1) {
+                if (strcmp(ctx->aes, AES_ECB) == 0) {
+                        ret = sts_encrypt_aes_ecb(&ctx->host_aes_ctx_enc, msg, 
+                                        enc, strlen((char*)msg), &ecb_len);
+                        if (ret != 0) {
+                                ERROR("sts: sts_encrypt_aes_ecb()\n");
+                                return -1;
+                        }
 
-        ret = mqtt_publish_aes_ecb(enc, ecb_len);
-        if (ret < 0) {
-                ERROR("sts: mqtt_publish_aes_ecb()\n");
-                return -1;
+                        ret = mqtt_publish_aes_ecb(enc, ecb_len);
+                        if (ret < 0) {
+                                ERROR("sts: mqtt_publish_aes_ecb()\n");
+                                return -1;
+                        }
+                }
+
+                if (strcmp(ctx->aes, AES_CBC) == 0) {
+                        ret = sts_encrypt_aes_cbc(&ctx->host_aes_ctx_enc, 
+                                        ctx->derived_key, msg, enc, 
+                                        strlen((char*)msg), &cbc_len);
+                        if (ret != 0) {
+                                ERROR("sts: sts_encrypt_aes_cbc()\n");
+                                return -1;
+                        }
+
+                        ret = mqtt_publish_aes_cbc(enc, cbc_len);
+                        if (ret < 0) {
+                                ERROR("sts: mqtt_publish_aes_cbc()\n");
+                                return -1;
+                        }
+                }
         }
         return 0;
 }
@@ -397,7 +422,7 @@ int sts_test_send_nosec(char **message)
         int ret;
         int i = 1;
         size_t msg_size = 0;
-        char msg_out[STS_MSG_MAXLEN];
+        char msg_out[STS_DATASIZE];
         struct sts_context *ctx = sts_get_ctx();
 
         memset(msg_out, 0, sizeof(msg_out));
@@ -423,8 +448,8 @@ int sts_test_send_nosec(char **message)
                 i++;
         }
 
-        if (msg_size > STS_MSG_MAXLEN) {
-                ERROR("sts: message too big, size <= %d\n", STS_MSG_MAXLEN);
+        if (msg_size > STS_DATASIZE) {
+                ERROR("sts: message too big, size <= %d\n", STS_DATASIZE);
                 return STS_PROMPT;
         }
 
@@ -449,7 +474,7 @@ int sts_test_send_sec(char **message)
         int ret;
         size_t i = 1;
         size_t size = 0;
-        char str[STS_MSG_MAXLEN];
+        char str[STS_DATASIZE];
         struct sts_context *ctx = sts_get_ctx();
 
         memset(str, 0, sizeof(str));
@@ -475,8 +500,8 @@ int sts_test_send_sec(char **message)
                 i++;
         }
 
-        if (size > STS_MSG_MAXLEN) {
-                ERROR("sts: message too big, size <= %d\n", STS_MSG_MAXLEN);
+        if (size > STS_DATASIZE) {
+                ERROR("sts: message too big, size <= %d\n", STS_DATASIZE);
                 return STS_PROMPT;
         }
 
@@ -537,7 +562,7 @@ int sts_status(char **argv)
                 INFO("sts: +==========================================+\n");
                 INFO("sts: | key agreement protocole: ECDH\n");
                 INFO("sts: | elliptic curve:          SECP256K1\n");
-                INFO("sts: | encryption:              AES-ECB-256\n");
+                INFO("sts: | encryption:              AES-%s-256\n", ctx->aes);
                 INFO("sts: +==========================================+\n");
         } else {
                 INFO("sts: +==========================================+\n");

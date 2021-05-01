@@ -7,3 +7,4 @@ subtop   = nisennenmondai
 pubtop   = nisennenmondai
 clientid = test_nosec
 sts_mode = nosec
+aes      = null

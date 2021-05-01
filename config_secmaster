@@ -7,3 +7,4 @@ subtop   = s2m
 pubtop   = m2s
 clientid = test_master
 sts_mode = master
+aes      = cbc
