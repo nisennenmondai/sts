@@ -52,8 +52,8 @@ static void _sig_handler(int signum)
                 if (ctx->status == STS_STARTED) {
                         sts_stop_session(NULL);
                 }
-                INFO("sts: exiting...\n");
-                exit(0);
+                INFO("sts: exiting sts...\n");
+                exit(EXIT_SUCCESS);
         }
 
         if (signum == SIGUSR1) {
@@ -64,8 +64,8 @@ static void _sig_handler(int signum)
         }
 
         if (signum == SIGALRM) {
-                INFO("sts: timer's up, exiting...\n");
-                exit(0);
+                INFO("sts: timer's up, exiting sts...\n");
+                exit(EXIT_SUCCESS);
         }
 }
 
@@ -97,11 +97,14 @@ static char *sts_read_line(void)
 
         /* read line */
         while (1) {
-                /* use of function getline is much easier */
                 c = getchar();
 
-                /* if we hit EOF, replace it with a null character and return */
-                if (c == EOF || c == '\n') {
+                if (c == EOF) {
+                        fprintf(stderr, "sts: EOF, exiting...\n");
+                        exit(EXIT_FAILURE);
+                }
+
+                if (c == '\n') {
                         buffer[position] = '\0';
                         return buffer;
                 } else {
@@ -240,7 +243,9 @@ int sts_start_session(char **argv)
         alarm(30); /* 30 seconds to start session or exit */
         (void)argv;
         int ret;
-        struct sts_context *ctx = sts_get_ctx();
+        struct sts_context *ctx;
+        sts_reset_ctx();
+        ctx = sts_get_ctx();
         ctx->pid = getpid();
 
         if (ctx->status == STS_STARTED) {
@@ -304,16 +309,6 @@ int sts_stop_session(char **argv)
         }
 
         /* flag -> if host rcv KILL msg from remote then no need to send KILL */
-        if (ctx->encryption == 0 && strcmp(ctx->sts_mode, "nosec") == 0 && 
-                        ctx->kill_flag == 0) {
-                INFO("sts: Sending KILL to remote client\n");
-                ctx->kill_flag = 1;
-                ret = sts_send_nosec(STS_KILL);
-                if (ret < 0) {
-                        ERROR("sts: could not send KILL to remote client\n");
-                }
-        }
-
         if (ctx->encryption == 1 && ctx->kill_flag == 0) {
                 INFO("sts: Sending KILL to remote client\n");
                 ctx->kill_flag = 1;
@@ -325,7 +320,7 @@ int sts_stop_session(char **argv)
 
         /* kill thread and give it time to close up */
         ctx->thrd_msg_type = STS_KILL_THREAD;
-        sleep(1);
+        usleep(500000);
 
         ret = mqtt_unsubscribe();
         if (ret < 0) {

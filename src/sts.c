@@ -132,21 +132,6 @@ static void _handlers(struct sts_message *msg)
 {
         int ret;
 
-        /* NOSEC MODE */
-        if (strcmp(ctx.sts_mode, "nosec") == 0) {
-                /* receive KILL from remote client */
-                if (strcmp(msg->header, STS_KILL) == 0) {
-                        /* if pubtopic == subtopic avoid double disc */
-                        if (ctx.kill_flag == 1) {
-                                return;
-                        }
-                        ctx.kill_flag = 1;
-                        INFO("sts: Received KILL from remote client\n");
-                        kill(ctx.pid, SIGUSR1);
-                        return;
-                }
-        }
-
         /* SLAVE SIDE */
         if (strcmp(ctx.sts_mode, "slave") == 0) {
                 /* receive KILL from master */
