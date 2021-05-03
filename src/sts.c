@@ -29,86 +29,6 @@ static pthread_t _mqttyield_thrd_pid;
 ////////////////////////////////////////////////////////////////////////////////
 /* STS */
 ////////////////////////////////////////////////////////////////////////////////
-static int _load_config(const char *config)
-{
-        FILE *fp;
-
-        fp = fopen(config, "r");
-        if (fp == NULL)
-        {
-                ERROR("sts: while opening config file -> start [FILE]\n");
-                return -1;
-        }
-
-        char key[CONF_KEY_MAXLEN] = {0};
-        char cmp[2] = {0};
-        char value[CONF_VAL_MAXLEN] = {0};
-
-        while (fscanf(fp, "%s %s %s ", key, cmp, value) != EOF) {
-                if (strcmp(key, "mqtt_version") == 0) {
-                        ctx.mqtt_version = atoi(value);
-                } else if (strcmp(key, "ip") == 0) {
-                        strcpy(ctx.ip, value);
-                } else if (strcmp(key, "port") == 0) {
-                        ctx.port = atoi(value);
-                } else if (strcmp(key, "username") == 0) {
-                        strcpy(ctx.username, value);
-                } else if (strcmp(key, "password") == 0) {
-                        strcpy(ctx.password, value);
-                } else if (strcmp(key, "subtop") == 0) {
-                        strcpy(ctx.topic_sub, value);
-                } else if (strcmp(key, "pubtop") == 0) {
-                        strcpy(ctx.topic_pub, value);
-                } else if (strcmp(key, "clientid") == 0) {
-                        strcpy(ctx.clientid, value);
-                } else if (strcmp(key, "sts_mode") == 0) {
-                        /* if nosec mode then aes = null */
-                        if (strcmp(value,STS_NOSEC) == 0) {
-                                strcpy(ctx.sts_mode, value);
-                                strcpy(ctx.aes, AES_NULL);
-                                fclose(fp);
-                                config = NULL;
-                                return 0;
-
-                        } else if (strcmp(value, STS_SECMASTER) == 0) {
-                                strcpy(ctx.sts_mode, value);
-                        } else if (strcmp(value, STS_SECSLAVE) == 0) {
-                                strcpy(ctx.sts_mode, value);
-                        } else {
-                                ERROR("sts: wrong value for sts_mode "
-                                                "nosec | master | slave\n");
-                                fclose(fp);
-                                config = NULL;
-                                return -1;
-                        }
-
-                } else if (strcmp(key, "aes") == 0) {
-                        if (strcmp(value, AES_NULL) == 0) {
-                                strcpy(ctx.aes, value);
-                        } else if (strcmp(value, AES_ECB) == 0) {
-                                strcpy(ctx.aes, value);
-                        } else if (strcmp(value, AES_CBC) == 0) {
-                                strcpy(ctx.aes, value);
-                        } else {
-                                ERROR("sts: wrong value for aes "
-                                                "null | ecb | cbc\n");
-                                fclose(fp);
-                                config = NULL;
-                                return -1;
-                        }
-
-                } else {
-                        ERROR("sts: wrong key(s) in config file, please "
-                                        "check 'config_' examples\n");
-                        fclose(fp);
-                        config = NULL;
-                        return -1;
-                }
-        }
-        fclose(fp);
-        config = NULL;
-        return 0;
-}
 
 static void _extract_pubkey(char *X, char *Y, struct sts_message *msg)
 {
@@ -378,20 +298,98 @@ static void _handlers(struct sts_message *msg)
         }
 }
 
+int sts_load_config(const char *config)
+{
+        FILE *fp;
+
+        fp = fopen(config, "r");
+        if (fp == NULL)
+        {
+                ERROR("sts: while opening config file -> start [FILE]\n");
+                return -1;
+        }
+
+        char key[CONF_KEY_MAXLEN] = {0};
+        char cmp[2] = {0};
+        char value[CONF_VAL_MAXLEN] = {0};
+
+        while (fscanf(fp, "%s %s %s ", key, cmp, value) != EOF) {
+                if (strcmp(key, "mqtt_version") == 0) {
+                        ctx.mqtt_version = atoi(value);
+                } else if (strcmp(key, "ip") == 0) {
+                        strcpy(ctx.ip, value);
+                } else if (strcmp(key, "port") == 0) {
+                        ctx.port = atoi(value);
+                } else if (strcmp(key, "username") == 0) {
+                        strcpy(ctx.username, value);
+                } else if (strcmp(key, "password") == 0) {
+                        strcpy(ctx.password, value);
+                } else if (strcmp(key, "subtop") == 0) {
+                        strcpy(ctx.topic_sub, value);
+                } else if (strcmp(key, "pubtop") == 0) {
+                        strcpy(ctx.topic_pub, value);
+                } else if (strcmp(key, "clientid") == 0) {
+                        strcpy(ctx.clientid, value);
+                } else if (strcmp(key, "sts_mode") == 0) {
+                        /* if nosec mode then aes = null */
+                        if (strcmp(value,STS_NOSEC) == 0) {
+                                strcpy(ctx.sts_mode, value);
+                                strcpy(ctx.aes, AES_NULL);
+                                fclose(fp);
+                                config = NULL;
+                                return 0;
+
+                        } else if (strcmp(value, STS_SECMASTER) == 0) {
+                                strcpy(ctx.sts_mode, value);
+                        } else if (strcmp(value, STS_SECSLAVE) == 0) {
+                                strcpy(ctx.sts_mode, value);
+                        } else {
+                                ERROR("sts: wrong value for sts_mode "
+                                                "nosec | master | slave\n");
+                                fclose(fp);
+                                config = NULL;
+                                return -1;
+                        }
+
+                } else if (strcmp(key, "aes") == 0) {
+                        if (strcmp(value, AES_NULL) == 0) {
+                                strcpy(ctx.aes, value);
+                        } else if (strcmp(value, AES_ECB) == 0) {
+                                strcpy(ctx.aes, value);
+                        } else if (strcmp(value, AES_CBC) == 0) {
+                                strcpy(ctx.aes, value);
+                        } else {
+                                ERROR("sts: wrong value for aes "
+                                                "null | ecb | cbc\n");
+                                fclose(fp);
+                                config = NULL;
+                                return -1;
+                        }
+
+                } else {
+                        ERROR("sts: wrong key(s) in config file, please "
+                                        "check 'config_' examples\n");
+                        fclose(fp);
+                        config = NULL;
+                        return -1;
+                }
+        }
+        fclose(fp);
+        config = NULL;
+        return 0;
+}
+
 int sts_init(const char *config)
 {
         int ret;
 
         sts_reset_ctx();
-        ret = _load_config(config);
+        ret = sts_load_config(config);
         if (ret < 0) {
                 return -1;
         }
 
-        NetworkInit(&ctx.network);
-        MQTTClientInit(&ctx.client, &ctx.network, COMMAND_TIMEOUT_MS,
-                        sendbuff, SENDBUFFSIZE, readbuff, READBUFFSIZE);
-        INFO("sts: network and client initialized\n");
+        mqtt_init();
         return 0;
 }
 
@@ -533,6 +531,14 @@ static void *_mqtt_yield(void *argv)
                 }
         }
         return NULL;
+}
+
+void mqtt_init(void)
+{
+        NetworkInit(&ctx.network);
+        MQTTClientInit(&ctx.client, &ctx.network, COMMAND_TIMEOUT_MS,
+                        sendbuff, SENDBUFFSIZE, readbuff, READBUFFSIZE);
+        INFO("sts: network and client initialized\n");
 }
 
 int mqtt_connect(void)

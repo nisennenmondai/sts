@@ -3,7 +3,7 @@
 
 #define NUMBER_TESTS 13
 
-void sts_ecdh_aes_cbc_test(void)
+void ecdh_aes_cbc_test(void)
 {
         TESTS("+================================================+\n");
         TESTS("|            ECDH SECP256K1 - AES-CBC            |\n");
@@ -175,5 +175,5 @@ void sts_ecdh_aes_cbc_test(void)
 
 int main(void)
 {
-        sts_ecdh_aes_cbc_test();
+        ecdh_aes_cbc_test();
 }

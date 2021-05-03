@@ -1,5 +1,12 @@
 #!/bin/sh
-./tests/ecdh_aes_cbc_256/ecdh_aes_cbc_256
+cd tests/ecdh_aes_cbc_256/
+./ecdh_aes_cbc_256
 echo ""
-./tests/ecdh_aes_ecb_256/ecdh_aes_ecb_256
+
+cd ../ecdh_aes_ecb_256/
+./ecdh_aes_ecb_256
+echo ""
+
+cd ../mqtt/
+./tests_mqtt
 echo ""

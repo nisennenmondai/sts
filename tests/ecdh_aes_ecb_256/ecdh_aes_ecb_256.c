@@ -3,7 +3,7 @@
 
 #define NUMBER_TESTS 13
 
-void sts_ecdh_aes_ecb_test(void)
+void ecdh_aes_ecb_test(void)
 {
         TESTS("+================================================+\n");
         TESTS("|            ECDH SECP256K1 - AES-ECB            |\n");
@@ -171,5 +171,5 @@ void sts_ecdh_aes_ecb_test(void)
 
 int main(void)
 {
-        sts_ecdh_aes_ecb_test();
+        ecdh_aes_ecb_test();
 }

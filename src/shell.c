@@ -320,7 +320,7 @@ int sts_stop_session(char **argv)
 
         /* kill thread and give it time to close up */
         ctx->thrd_msg_type = STS_KILL_THREAD;
-        sleep(1);
+        sleep(2);
 
         ret = mqtt_unsubscribe();
         if (ret < 0) {

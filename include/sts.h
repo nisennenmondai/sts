@@ -107,6 +107,7 @@ struct sts_context {
 };
 
 /* mqtt */
+void mqtt_init(void);
 int mqtt_connect(void);
 int mqtt_disconnect(void);
 int mqtt_subscribe(void);
@@ -116,10 +117,11 @@ int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len);
 int mqtt_publish_aes_cbc(unsigned char *enc, size_t cbc_len);
 
 /* sts */
-void sts_free_sec(void);
-void sts_reset_ctx(void);
+int sts_load_config(const char *config);
 int sts_init(const char *config);
 int sts_init_sec(void);
+void sts_free_sec(void);
+void sts_reset_ctx(void);
 struct sts_context *sts_get_ctx(void);
 
 /* sts cmd */
