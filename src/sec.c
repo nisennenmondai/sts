@@ -8,14 +8,14 @@
 #include "ctr_drbg.h"
 #include "entropy.h"
 
-int sts_verify_keylen(const unsigned char *buf, size_t size, size_t len)
+int sts_verify_keylen(const unsigned char *derived_key, size_t size, size_t len)
 {
         size_t i;
         size_t keylen;
         int tmp = 0; 
 
         for (i = 0 ; i < size; i++) {
-                if (buf[i] == '\0') {
+                if (derived_key[i] == '\0') {
                         break;
                 }
                 tmp++;

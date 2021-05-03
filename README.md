@@ -3,6 +3,7 @@ MQTT client with end to end encryption for Embedded Linux
 -------
 #### CONFIG files
 Config files provided work just fine.
+- mqtt_version = 3 || 4
 - sts_mode = nosec || master || slave
 - aes = null || ecb || cbc
 
