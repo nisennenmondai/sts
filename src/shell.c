@@ -240,14 +240,11 @@ static void sts_loop(void)
 ////////////////////////////////////////////////////////////////////////////////
 int sts_start_session(char **argv)
 {
-        alarm(30); /* 30 seconds to start session or exit */
         (void)argv;
         int ret;
         struct sts_context *ctx;
-        sts_reset_ctx();
         ctx = sts_get_ctx();
-        ctx->pid = getpid();
-
+        
         if (ctx->status == STS_STARTED) {
                 ERROR("sts: a session has already been started already\n");
                 return STS_PROMPT;
@@ -257,6 +254,10 @@ int sts_start_session(char **argv)
                 ERROR("sts: config file missing, start [PATH_TO_CONFIG]\n");
                 return STS_PROMPT;
         }
+
+        alarm(30); /* 30 seconds to start session or exit */
+        sts_reset_ctx();
+        ctx->pid = getpid();
 
         ret = sts_init(argv[1]);
         if (ret < 0) {

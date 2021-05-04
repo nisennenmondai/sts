@@ -161,10 +161,10 @@ static void _msg_handlers(struct sts_message *msg)
                         kill(ctx.pid, SIGUSR1);
                 }
 
-                /* receive INIT from master */
-                if (strcmp(msg->header, STS_INIT) == 0 && 
+                /* receive INITREQ from master */
+                if (strcmp(msg->header, STS_INITREQ) == 0 && 
                                 ctx.slave_flag == STS_STEP_0) {
-                        TRACE("sts: Received INIT from master\n");
+                        TRACE("sts: Received INITREQ from master\n");
                         _extract_ids(msg);
                         ctx.slave_flag = STS_STEP_1;
                         return;
@@ -644,7 +644,7 @@ int mqtt_publish(char *string)
 
         /* echo */
         if (ctx.no_print == 0) {
-                INFO("[MQTTOUT]: %s\n", string);
+                INFO("[MQTT_OUT]: %s\n", string);
         }
         ctx.no_print = 0;
         ctx.msg_sent++;
@@ -680,7 +680,7 @@ int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len)
 
         /* echo */
         if (ctx.no_print == 0) {
-                INFO("[MQTTOUT]: %s\n", enc);
+                INFO("[MQTT_OUT]: %s\n", enc);
         }
         ctx.no_print = 0;
         ctx.msg_sent++;
@@ -717,7 +717,7 @@ int mqtt_publish_aes_cbc(unsigned char *enc, size_t cbc_len)
 
         /* echo */
         if (ctx.no_print == 0) {
-                INFO("[MQTTOUT]: %s\n", enc);
+                INFO("[MQTT_OUT]: %s\n", enc);
         }
         ctx.no_print = 0;
         ctx.msg_sent++;
@@ -779,10 +779,10 @@ int sts_init_sec(void)
 
         /* MASTER SIDE */
         if (strcmp(ctx.sts_mode, STS_SECMASTER) == 0) {
-                /* send INIT to slave */
-                TRACE("sts: Sending INIT to slave\n");
+                /* send INITREQ to slave */
+                TRACE("sts: Sending INITREQ to slave\n");
                 memset(msg_out, 0, sizeof(msg_out));
-                concatenate(msg_out, "INIT:");
+                concatenate(msg_out, STS_INITREQ);
                 concatenate(msg_out, (char*)id_master);
                 concatenate(msg_out, (char*)id_slave);
                 sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
@@ -891,8 +891,8 @@ int sts_init_sec(void)
 
         /* SLAVE SIDE */
         if (strcmp(ctx.sts_mode, STS_SECSLAVE) == 0) {
-                /* wait INIT from master */
-                TRACE("sts: Waiting INIT from master\n");
+                /* wait INITREQ from master */
+                TRACE("sts: Waiting INITREQ from master\n");
                 while (ctx.slave_flag == STS_STEP_0) {};
 
                 /* send INITACK to master */

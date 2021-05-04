@@ -42,14 +42,14 @@
 #define STS_KILL_THREAD 1
 
 /* sts msg types */
-#define STS_INIT    "INIT:"
+#define STS_INITREQ "INITREQ:"
 #define STS_INITACK "INITACK:"
 #define STS_AUTHREQ "AUTHREQ:"
 #define STS_AUTHACK "AUTHACK:"
 #define STS_RDYREQ  "RDYREQ:"
 #define STS_RDYACK  "RDYACK:"
-#define STS_ENC     "ENC:"
 #define STS_KILL    "KILL:"
+#define STS_ENC     "ENC:"
 
 /* sts msg sizes */
 #define STS_HEADERSIZE 10
