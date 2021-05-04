@@ -8,14 +8,14 @@
 #include "ctr_drbg.h"
 #include "entropy.h"
 
-int sts_verify_keylen(const unsigned char *derived_key, size_t size, size_t len)
+int sts_verify_keylen(const unsigned char *key, size_t size, size_t len)
 {
         size_t i;
         size_t keylen;
         int tmp = 0; 
 
         for (i = 0 ; i < size; i++) {
-                if (derived_key[i] == '\0') {
+                if (key[i] == '\0') {
                         break;
                 }
                 tmp++;
@@ -28,6 +28,11 @@ int sts_verify_keylen(const unsigned char *derived_key, size_t size, size_t len)
         return 0;
 }
 
+/* 
+ * encode/decode data during authentication so it is not human readable, this 
+ * algo is very simple and serves only as an example, it is recommanded to have 
+ * your own PRIVATE algorithm.
+ */
 void sts_encode(unsigned char *data, size_t size)
 {
         reverse_bits_order(data, size);
@@ -100,7 +105,8 @@ int sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input,
         iter = *ecb_len / ECB_BLOCKSIZE;
 
         for (i = 0; i < iter; i++) {
-                ret = mbedtls_aes_crypt_ecb(ctx, MBEDTLS_AES_ENCRYPT, p_in, p_out);
+                ret = mbedtls_aes_crypt_ecb(ctx, MBEDTLS_AES_ENCRYPT, 
+                                p_in, p_out);
                 if (ret != 0) {
                         return ret;
                 }
@@ -123,7 +129,8 @@ int sts_decrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input,
         iter = ecb_len / ECB_BLOCKSIZE;
 
         for (i = 0; i < iter; i++) {
-                ret = mbedtls_aes_crypt_ecb(ctx, MBEDTLS_AES_DECRYPT, p_in, p_out);
+                ret = mbedtls_aes_crypt_ecb(ctx, MBEDTLS_AES_DECRYPT, 
+                                p_in, p_out);
                 if (ret != 0) {
                         return ret;
                 }

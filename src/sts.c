@@ -104,6 +104,10 @@ static int _compute_shared_secret(char *master_QX, char *master_QY)
                 return -1;
         }
 
+        /* 
+         * TODO sometimes derived_key is not 256 bits long, I don't know why 
+         * we need to verify it 
+         */
         ret = sts_verify_keylen(ctx.derived_key, sizeof(ctx.derived_key), 
                         ECDH_KEYSIZE_BITS);
         if (ret != 0) {
@@ -144,7 +148,7 @@ static void _extract_ids(struct sts_message *msg)
         }
 }
 
-static void _handlers(struct sts_message *msg)
+static void _msg_handlers(struct sts_message *msg)
 {
         int ret;
 
@@ -441,7 +445,7 @@ static void _mqtt_on_msg_recv(MessageData *data)
                 memcpy(msg_inc, data->message->payload, 
                                 data->message->payloadlen);
                 _parse_msg(msg_inc, &msg);
-                _handlers(&msg);
+                _msg_handlers(&msg);
 
                 INFO("[MQTT_INC]: %s\n", msg.data);
                 ctx.msg_recv++;
@@ -461,7 +465,7 @@ static void _mqtt_on_msg_recv(MessageData *data)
                                 data->message->payloadlen);
 
                 _parse_msg(msg_inc, &msg);
-                _handlers(&msg);
+                _msg_handlers(&msg);
 
                 ctx.msg_recv++;
                 free(msg_inc);
@@ -504,7 +508,7 @@ static void _mqtt_on_msg_recv(MessageData *data)
                 }
 
                 _parse_msg((char*)dec, &msg);
-                _handlers(&msg);
+                _msg_handlers(&msg);
 
                 INFO("[MQTT_INC]: %s\n", msg.data );
                 ctx.msg_recv++;
@@ -549,7 +553,9 @@ int mqtt_connect(void)
         MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
         data.MQTTVersion = ctx.mqtt_version;
         data.clientID.cstring = ctx.clientid;
+        /* keepalive not implemented */
         data.keepAliveInterval = 0;
+        /* no persistent session */
         data.cleansession = 1;
         data.username.cstring = ctx.username;
         data.password.cstring = ctx.password;
@@ -624,6 +630,7 @@ int mqtt_publish(char *string)
                 ERROR("sts: publish failed, msg > %d\n", STS_MSG_MAXLEN);
                 return -1;
         }
+        /* TODO if qos > 0, triggers seg fault */
         msg.qos = 0;
         msg.payload = (void*)string;
         msg.payloadlen = strlen(string);
@@ -656,10 +663,12 @@ int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len)
 
         msg.qos = 0;
         msg.payload = (void*)enc;
-        /* we are not sending the size of the actual encrypted data but the size
+        /* 
+         * we are not sending the size of the actual encrypted data but the size
          * of the original message aligned with ecb_blocksize (16) so if msg
          * was 17 bytes long, we will need 2 ecb blocks (32 bytes). ecb_len is
-         * needed for the decrypt function */
+         * needed for the decrypt function 
+         */
         msg.payloadlen = ecb_len;
         msg.retained = 0;
 
@@ -691,10 +700,12 @@ int mqtt_publish_aes_cbc(unsigned char *enc, size_t cbc_len)
 
         msg.qos = 0;
         msg.payload = (void*)enc;
-        /* we are not sending the size of the actual encrypted data but the size
+        /* 
+         * we are not sending the size of the actual encrypted data but the size
          * of the original message aligned with cbc_blocksize (16) so if msg
-         * was 17 bytes long, we will need 2 ecb blocks (32 bytes). ecb_len is
-         * needed for the decrypt function */
+         * was 17 bytes long, we will need 2 cbc blocks (32 bytes). cbc_len is
+         * needed for the decrypt function 
+         */
         msg.payloadlen = cbc_len;
         msg.retained = 0;
 

@@ -357,7 +357,6 @@ int sts_send_nosec(char *str)
         return 0;
 }
 
-
 int sts_send_sec(char *str)
 {
         int ret;

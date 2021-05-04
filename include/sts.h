@@ -357,7 +357,7 @@ int sts_drbg(void *rng_state, unsigned char *output, size_t len);
  * @param len           reference length we want to verify (256).
  * @return              != 0 if length of derived_ley is not equal to len.
  */
-int sts_verify_keylen(const unsigned char *derived_key, size_t size, size_t len);
+int sts_verify_keylen(const unsigned char *key, size_t size, size_t len);
 
 /*
  * @brief               encode data.

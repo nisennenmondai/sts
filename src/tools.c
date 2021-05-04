@@ -42,19 +42,19 @@ void xor_bits(unsigned char *b, size_t size)
         }
 }
 
-void concatenate(char p[], char q[])
+void concatenate(char dst[], char src[])
 {
         int c = 0;
         int d = 0;
 
-        while (p[c] != '\0') {
+        while (dst[c] != '\0') {
                 c++;
         }
 
-        while (q[d] != '\0') {
-                p[c] = q[d];
+        while (src[d] != '\0') {
+                dst[c] = src[d];
                 d++;
                 c++;
         }
-        p[c] = '\0';
+        dst[c] = '\0';
 }

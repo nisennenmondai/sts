@@ -7,9 +7,9 @@ Config files provided work just fine.
 - sts_mode = nosec || master || slave
 - aes = null || ecb || cbc
 
-Those config files use a public MQTT broker, **THERE IS NO PRIVACY PROTECTION**
-- https://www.emqx.io/mqtt/public-mqtt5-broker
-- Broker: broker.emqx.io
+Those config files use a public MQTT broker.
+- https://www.hivemq.com/public-mqtt-broker/
+- Broker: broker.hivemq.com
 - TCP Port: 1883
 
 #### HOWTO build
