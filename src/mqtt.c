@@ -27,7 +27,10 @@ static void _mqtt_on_msg_recv(MessageData *data)
                 sts_parse_msg(msg_inc, &msg);
                 sts_msg_handlers(&msg);
 
-                INFO("[MQTT_INC]: %s\n", msg.data);
+                if (ctx->no_print_inc == 0) {
+                        INFO("[MQTT_INC]: %s\n", msg.data);
+                }
+                ctx->no_print_inc = 0;
                 ctx->msg_recv++;
                 free(msg_inc);
         }
@@ -90,7 +93,10 @@ static void _mqtt_on_msg_recv(MessageData *data)
                 sts_parse_msg((char*)dec, &msg);
                 sts_msg_handlers(&msg);
 
-                INFO("[MQTT_INC]: %s\n", msg.data );
+                if (ctx->no_print_inc == 0) {
+                        INFO("[MQTT_INC]: %s\n", msg.data);
+                }
+                ctx->no_print_inc = 0;
                 ctx->msg_recv++;
                 free(enc);
         }
@@ -238,10 +244,10 @@ int mqtt_publish(char *string)
         }
 
         /* echo */
-        if (ctx->no_print == 0) {
+        if (ctx->no_print_out == 0) {
                 INFO("[MQTT_OUT]: %s\n", string);
         }
-        ctx->no_print = 0;
+        ctx->no_print_out = 0;
         ctx->msg_sent++;
         return 0;
 }
@@ -276,10 +282,10 @@ int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len)
         }
 
         /* echo */
-        if (ctx->no_print == 0) {
+        if (ctx->no_print_out == 0) {
                 INFO("[MQTT_OUT]: %s\n", enc);
         }
-        ctx->no_print = 0;
+        ctx->no_print_out = 0;
         ctx->msg_sent++;
         return 0;
 }
@@ -315,10 +321,10 @@ int mqtt_publish_aes_cbc(unsigned char *enc, size_t cbc_len)
         }
 
         /* echo */
-        if (ctx->no_print == 0) {
+        if (ctx->no_print_out == 0) {
                 INFO("[MQTT_OUT]: %s\n", enc);
         }
-        ctx->no_print = 0;
+        ctx->no_print_out = 0;
         ctx->msg_sent++;
         return 0;
 }

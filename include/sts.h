@@ -75,7 +75,8 @@ struct sts_message {
  * @pid                 linux pid of main process.
  * @thrd_msg_type       msg type sent to mqttyield thread.
  * @status              sts status, can be STARTED | STOPPED.
- * @no_print            flag, if set to 1, published msg won't be displayed.
+ * @no_print_out        flag, if set to 1, published msg won't be displayed.
+ * @no_print_inc        flag, if set to 1, income msg won't be displayed.
  * @encryption          flag, tell if encryption is active or not.                 
  * @derived_key         computed shared secret for symmetric encryption.
  * @master_flag         flag used durint init_sec, STS_STEP 0|1|2|3|4|5.
@@ -105,7 +106,8 @@ struct sts_context {
         unsigned int pid;
         unsigned int thrd_msg_type;
         unsigned short status;
-        unsigned short no_print;
+        unsigned short no_print_out;
+        unsigned short no_print_inc;
         unsigned short encryption;
         unsigned char derived_key[ECDH_KEYSIZE_BYTES];
         volatile unsigned short master_flag;

@@ -15,7 +15,7 @@ void mqtt_test(void)
         struct sts_context *ctx;
 
         ctx = sts_get_ctx();
-        ctx->no_print = 1;
+        ctx->no_print_out = 1;
         ctx->pid = getpid();
 
         sts_load_config("config_nosec");

@@ -6,7 +6,8 @@
 static struct sts_context ctx = {
         .mqtt_version   = 0,
         .port           = 0,
-        .no_print       = 0,
+        .no_print_out   = 0,
+        .no_print_inc   = 0,
         .msg_sent       = 0,
         .msg_recv       = 0,
         .thrd_msg_type  = 0,
@@ -174,6 +175,7 @@ void sts_msg_handlers(struct sts_message *msg)
                 /* receive KILL from master */
                 if (strcmp(msg->header, STS_KILL) == 0 && ctx.encryption == 1) {
                         ctx.kill_flag = 1;
+                        ctx.no_print_inc = 1;
                         INFO("sts: Received KILL from master\n");
                         kill(ctx.pid, SIGUSR1);
                 }
@@ -249,6 +251,7 @@ void sts_msg_handlers(struct sts_message *msg)
                 /* receive KILL from slave */
                 if (strcmp(msg->header, STS_KILL) == 0 && ctx.encryption == 1) {
                         ctx.kill_flag = 1;
+                        ctx.no_print_inc = 1;
                         INFO("sts: Received KILL from slave\n");
                         kill(ctx.pid, SIGUSR1);
                         return;
@@ -365,6 +368,7 @@ int sts_send_sec(char *str)
         memset(enc, 0, sizeof(enc));
 
         if (ctx.kill_flag == 1) {
+                ctx.no_print_out = 1;
                 /* if sending a KILL msg, don't add ENC header */
                 concatenate((char*)msg, str);
 
@@ -480,7 +484,7 @@ int sts_init_sec(void)
                 concatenate(msg_out, (char*)id_slave);
                 sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
-                ctx.no_print = 1;
+                ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish()\n");
@@ -499,7 +503,7 @@ int sts_init_sec(void)
                 concatenate(msg_out, ctx.id_slave);
                 sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
-                ctx.no_print = 1;
+                ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish()\n");
@@ -520,7 +524,7 @@ int sts_init_sec(void)
                 concatenate(msg_out, STS_AUTHACK);
                 sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
-                ctx.no_print = 1;
+                ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish()\n");
@@ -549,7 +553,7 @@ int sts_init_sec(void)
                 concatenate(msg_out, master_QY);
                 sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
-                ctx.no_print = 1;
+                ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish()\n");
@@ -570,7 +574,7 @@ int sts_init_sec(void)
                 concatenate(msg_out, STS_RDYACK);
                 sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
-                ctx.no_print = 1;
+                ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish()\n");
@@ -594,7 +598,7 @@ int sts_init_sec(void)
                 concatenate(msg_out, STS_INITACK);
                 sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
-                ctx.no_print = 1;
+                ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish()\n");
@@ -611,7 +615,7 @@ int sts_init_sec(void)
                 concatenate(msg_out, STS_AUTHACK);
                 sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
-                ctx.no_print = 1;
+                ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish()\n");
@@ -625,7 +629,7 @@ int sts_init_sec(void)
                 concatenate(msg_out, ctx.id_master);
                 sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
-                ctx.no_print = 1;
+                ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish()\n");
@@ -646,7 +650,7 @@ int sts_init_sec(void)
                 concatenate(msg_out, STS_RDYACK);
                 sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
-                ctx.no_print = 1;
+                ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish()\n");
@@ -675,7 +679,7 @@ int sts_init_sec(void)
                 concatenate(msg_out, slave_QY);
                 sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
-                ctx.no_print = 1;
+                ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish()\n");
@@ -706,7 +710,8 @@ void sts_reset_ctx(void)
 {
         ctx.mqtt_version  = 0;
         ctx.port          = 0;
-        ctx.no_print      = 0;
+        ctx.no_print_out  = 0;
+        ctx.no_print_inc  = 0;
         ctx.msg_sent      = 0;
         ctx.msg_recv      = 0;
         ctx.thrd_msg_type = 0;

@@ -10,7 +10,10 @@
 
 ## **Introduction**
 
-STS is an application-layer protocol on top of MQTT that allows payload end-to-end encryption between 2 clients. You can find more information about MQTT payload encryption on this link: https://www.hivemq.com/blog/mqtt-security-fundamentals-payload-encryption/
+STS is an application-layer protocol on top of MQTT that allows payload end-to-end encryption between 2 clients. You can find more information about MQTT payload encryption on this link:
+
+https://www.hivemq.com/blog/mqtt-security-fundamentals-payload-encryption/
+
 This can be very useful as MQTT-TLS does not provide end-to-end encryption between 2 clients and often cannot be implemented on resource constraints systems such as MCU.
 
 ## **Dependencies**
