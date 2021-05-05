@@ -3,24 +3,15 @@
 
 #include "MQTTLinux.h"
 #include "MQTTClient.h"
-#include "ecdh.h"
+
 #include "aes.h"
+#include "ecdh.h"
 
-/* init mqtt */
-#define READBUFFSIZE       1024
-#define SENDBUFFSIZE       1024
-#define COMMAND_TIMEOUT_MS 10000
-
-/* config file */
+/* sts config */
 #define CONF_KEY_MAXLEN 16
 #define CONF_VAL_MAXLEN 128
 
-/* shell */
-#define STS_TOK_BUFFSIZE 64
-#define STS_RL_BUFFSIZE  1024
-#define STS_TOK_DELIM    " \t\r\n\a"
-
-/* sec */
+/* sts sec */
 #define BYTE               8
 #define ECB_BLOCKSIZE      16
 #define CBC_BLOCKSIZE      16
@@ -32,11 +23,7 @@
 #define AES_ECB            "ecb"
 #define AES_CBC            "cbc"
 
-/* return code */
-#define STS_EXIT   0
-#define STS_PROMPT 1
-
-/* status */
+/* sts status */
 #define STS_STARTED 0
 #define STS_STOPPED 1 
 #define STS_KILL_THREAD 1
@@ -142,58 +129,6 @@ struct sts_context {
 };
 
 /*
- * @brief       initialize network.
- */
-void mqtt_init(void);
-
-/*
- * @brief       connect to a mqtt broker.
- * @return      -1 if connection fails.
- */
-int mqtt_connect(void);
-
-/*
- * @brief       disconnect from a mqtt broker.
- * @return      -1 if disconnection fails.
- */
-int mqtt_disconnect(void);
-
-/*
- * @brief       subscribe to a topic.
- * @return      -1 if subscription fails.
- */
-int mqtt_subscribe(void);
-
-/*
- * @brief       unsubscribe from a topic.
- * @return      -1 if unsubscription fails.
- */
-int mqtt_unsubscribe(void);
-
-/*
- * @brief               publish to a topic.
- * @param string        message to publish.
- * @return              -1 if publish fails.
- */
-int mqtt_publish(char *string);
-
-/*
- * @brief               publish to a topic with aes-ecb mode
- * @param enc           encrypted data.
- * @param ecb_len       encrypted data length aligned with ecb blocksize.
- * @return              -1 if publish fails.
- */
-int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len);
-
-/*
- * @brief               publish to a topic with aes-cbc mode
- * @param enc           encrypted data.
- * @param cbc_len       encrypted data length aligned with cbc blocksize.
- * @return              -1 if publish fails.
- */
-int mqtt_publish_aes_cbc(unsigned char *enc, size_t cbc_len);
-
-/*
  * @brief               load sts config file.
  * @param config        path to config file.
  * @return              -1 if can't load config file.
@@ -224,25 +159,6 @@ void sts_free_sec(void);
 void sts_reset_ctx(void);
 
 /*
- * @brief       retrieve context.
- */
-struct sts_context *sts_get_ctx(void);
-
-/*
- * @brief               start a sts session.
- * @param argv          path to config file entered in shell.
- * @return              STS_PROMPT.
- */
-int sts_start_session(char **argv);
-
-/*
- * @brief               stop a sts session.
- * @param argv          null.
- * @return              STS_PROMPT.
- */
-int sts_stop_session(char **argv);
-
-/*
  * @brief               send a message with no encryption.
  * @param str           message.
  * @return              -1 if fails to send message.
@@ -257,120 +173,21 @@ int sts_send_nosec(char *str);
 int sts_send_sec(char *str);
 
 /*
- * @brief               print help in shell.
- * @param argv          null.
- * @return              STS_PROMPT
+ * @brief       retrieve context.
  */
-int sts_help(char **argv);
+struct sts_context *sts_get_ctx(void);
 
 /*
- * @brief               exit shell.
- * @param argv          null.
- * @return              STS_EXIT.
+ * @brief               extract sts header and data.
+ * @param inc           incoming message.
+ * @parem msg           sts message with extracted header and data.
  */
-int sts_exit(char **argv);
+void sts_parse_msg(char *inc, struct sts_message *msg);
 
 /*
- * @brief               print sts status in shell.
- * @param argv          null.
- * @return              STS_PROMPT.
+ * @brief               handle incoming sts message regarding their types
+ * @parem msg           sts message with extracted header and data.
  */
-int sts_status(char **argv);
-
-/*
- * @brief               test to send a message with no encryption.
- * @param argv          message.
- * @return              STS_PROMPT.
- */
-int sts_test_send_nosec(char **argv);
-
-/*
- * @brief               test to send a message with encryption.
- * @param argv          message.
- * @return              STS_PROMPT.
- */
-int sts_test_send_sec(char **argv);
-
-/*
- * @brief               encrypt data using aes-ecb block cipher mode.
- * @param ctx           mbedtls aes context.
- * @param input         data to be encrypted.
- * @param ouput         encrypted data.
- * @param size          size of data to be encrypted.
- * @param ecb_len       size of encrypted data aligned with ecb block.
- * @return              != 0 if encryption fails.
- */
-int sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
-                unsigned char *output, size_t size, size_t *ecb_len);
-
-/*
- * @brief               decrypt data using aes-ecb block cipher mode.
- * @param ctx           mbedtls aes context.
- * @param input         encrypted data.
- * @param ouput         decrypted data.
- * @param ecb_len       size of encrypted data aligned with ecb block.
- * @return              != 0 if decryption fails.
- */
-int sts_decrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
-                unsigned char *output, size_t ecb_len);
-
-/*
- * @brief               encrypt data using aes-cbc block cipher mode.
- * @param ctx           mbedtls aes context.
- * @param iv            cbc initialization vector, should be random value, in
- *                      our case derived_key is used.
- * @param input         data to be encrypted.
- * @param ouput         decrypted data.
- * @param cbc_len       size of encrypted data aligned with cbc block.
- * @return              != 0 if encryption fails.
- */
-int sts_encrypt_aes_cbc(mbedtls_aes_context *ctx, unsigned char *iv, 
-                unsigned char *input, unsigned char *output, 
-                size_t size, size_t *cbc_len);
-
-/*
- * @brief               decrypt data using aes-cbc block cipher mode.
- * @param ctx           mbedtls aes context.
- * @param iv            cbc initialization vector, should be random value, in
- *                      our case derived_key is used.
- * @param input         encrypted data.
- * @param ouput         decrypted data.
- * @param cbc_len       size of encrypted data aligned with cbc block.
- * @return              != 0 if encryption fails.
- */
-int sts_decrypt_aes_cbc(mbedtls_aes_context *ctx, unsigned char *iv, 
-                unsigned char *input, unsigned char *output, size_t cbc_len);
-
-/*
- * @brief               generate a random number for key generation.
- * @param rng_state     this callback isn't used.
- * @param ouput         random gen.
- * @param len           length of output.
- * @return              != 0 if genrand fails.
- */
-int sts_drbg(void *rng_state, unsigned char *output, size_t len);
-
-/*
- * @brief               verify the length of derived_ley.
- * @param buf           derived key.
- * @param size          size of derived_key.
- * @param len           reference length we want to verify (256).
- * @return              != 0 if length of derived_ley is not equal to len.
- */
-int sts_verify_keylen(const unsigned char *key, size_t size, size_t len);
-
-/*
- * @brief               encode data.
- * @param data          data to be encoded.
- * @param size          size of data.
- */
-void sts_encode(unsigned char *data, size_t size);
-
-/*
- * @brief               decode data.
- * @param data          data to be decoded.
- * @param size          size of data.
- */
-void sts_decode(unsigned char *data, size_t size);
+void sts_msg_handlers(struct sts_message *msg);
 
 #endif /* STS_H */

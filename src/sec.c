@@ -80,6 +80,56 @@ cleanup:
         return ret;
 }
 
+
+int sts_compute_shared_secret(char *X, char *Y, struct sts_context *ctx)
+{
+        int ret;
+        size_t olen;
+        ret = mbedtls_ecp_point_read_string(&ctx->host_ecdh_ctx.Qp, 16, X, Y);
+        if (ret != 0) {
+                ERROR("sts: mbedtls_ecp_point_read_string()\n");
+                return -1;
+        }
+
+        memset(ctx->derived_key, 0, sizeof(ctx->derived_key));
+        ret = mbedtls_ecdh_calc_secret(&ctx->host_ecdh_ctx, 
+                        &olen, ctx->derived_key, 
+                        sizeof(ctx->derived_key), 
+                        sts_drbg, NULL);
+        if (ret != 0) {
+                ERROR("sts: mbedtls_ecdh_calc_secret()\n");
+                return -1;
+        }
+
+        /* 
+         * TODO sometimes derived_key is not 256 bits long, I don't know why 
+         * we need to verify it 
+         */
+        ret = sts_verify_keylen(ctx->derived_key, sizeof(ctx->derived_key), 
+                        ECDH_KEYSIZE_BITS);
+        if (ret != 0) {
+                WARN("sts: derived key != %d bits in length (only %d bits), "
+                                "something went wrong, start a new session\n", 
+                                ECDH_KEYSIZE_BITS, ret);
+                return -1;
+        }
+
+        ret = mbedtls_aes_setkey_enc(&ctx->host_aes_ctx_enc, ctx->derived_key,
+                        ECDH_KEYSIZE_BITS);
+        if (ret != 0) {
+                ERROR("sts: mbedtls_aes_setkey_enc()\n");
+                return -1;
+        }
+
+        ret = mbedtls_aes_setkey_dec(&ctx->host_aes_ctx_dec, ctx->derived_key,
+                        ECDH_KEYSIZE_BITS);
+        if (ret != 0) {
+                ERROR("sts: mbedtls_aes_setkey_dec()\n");
+                return -1;
+        }
+        return 0;
+}
+
 int sts_encrypt_aes_ecb(mbedtls_aes_context *ctx, unsigned char *input, 
                 unsigned char *output, size_t size, size_t *ecb_len)
 {

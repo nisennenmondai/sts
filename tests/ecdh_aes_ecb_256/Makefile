@@ -26,6 +26,8 @@ all: $(EXE)
 	mv $(SRC_DIR)/sec.o $(OBJ_DIR)
 	mv $(SRC_DIR)/sts.o $(OBJ_DIR)
 	mv $(SRC_DIR)/tools.o $(OBJ_DIR)
+	mv $(SRC_DIR)/mqtt.o $(OBJ_DIR)
+	mv $(SRC_DIR)/shell_commands.o $(OBJ_DIR)
 	mv $(EXE).o $(OBJ_DIR)
 
 $(EXE): $(OBJ) | $(OBJ_DIR)

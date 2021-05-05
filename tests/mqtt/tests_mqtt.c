@@ -1,5 +1,6 @@
-#include "sts.h"
 #include "log.h"
+#include "mqtt.h"
+#include "sts.h"
 
 #define NUMBER_TESTS 5
 

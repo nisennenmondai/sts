@@ -1,5 +1,6 @@
-#include "sts.h"
 #include "log.h"
+#include "sts.h"
+#include "sec.h"
 
 #define NUMBER_TESTS 13
 
