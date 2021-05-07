@@ -1,12 +1,12 @@
 # **Secure Telemetry Shell**
-## *MQTT client with end to end encryption for Embedded Linux*
+## *MQTT client with End-to-End Payload Encryption for Embedded Linux*
 
 ## **Features**
 
 - **Lightweight MQTT client** for Embedded Linux
 - **Authentication** scheme
-- **End-to-End Encryption** with dynamic cryptographic key generation at each 
-    session
+- **End-to-End Payload Encryption** with dynamic cryptographic key generation at 
+  each session
 - **Encapsulation** in a shell
 
 ## **Introduction**
@@ -17,9 +17,8 @@ MQTT payload encryption on this link:
 
 https://www.hivemq.com/blog/mqtt-security-fundamentals-payload-encryption/
 
-This can be very useful as MQTT-TLS does not provide end-to-end encryption 
-between 2 clients and often cannot be implemented on resource constraints 
-systems such as MCU.
+This can be very useful as MQTT-TLS does not provide payload encryption and 
+often cannot be implemented on resource constraints systems such as MCU.
 
 
 ![](doc/img/archi.png?raw=true "stack")
