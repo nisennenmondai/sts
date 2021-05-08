@@ -63,6 +63,11 @@ the ones provided work just fine, they use a public broker:
 
 https://www.hivemq.com/public-mqtt-broker/
 
+If can't connect try this one:
+
+https://www.emqx.io/mqtt/public-mqtt5-broker
+
+
 | KEY  | VALUE (128 char max)| 
 | ------------- | ------------- |
 | **mqtt_version** | 3 or 4  |

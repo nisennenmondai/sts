@@ -1,5 +1,5 @@
 mqtt_version  = 4
-ip   = 18.197.197.58
+ip   = 3.124.222.91
 port = 1883
 username = master
 password = master
