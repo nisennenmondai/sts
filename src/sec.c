@@ -33,13 +33,13 @@ int sts_verify_keylen(const unsigned char *key, size_t size, size_t len)
  * algo is very simple and serves only as an example, it is recommanded to have 
  * your own PRIVATE algorithm.
  */
-void sts_encode(unsigned char *data, size_t size)
+void sts_obfuscate(unsigned char *data, size_t size)
 {
         reverse_bits_order(data, size);
         xor_bits(data, size);
 }
 
-void sts_decode(unsigned char *data, size_t size)
+void sts_clarify(unsigned char *data, size_t size)
 {
         xor_bits(data, size);
         reverse_bits_order(data, size);

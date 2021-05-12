@@ -5,8 +5,7 @@
 
 - **Lightweight MQTT client** for Embedded Linux
 - **Authentication** scheme
-- **End-to-End Payload Encryption** with dynamic cryptographic key generation at 
-  each session
+- **End-to-End Payload Encryption** with symmetric cipher
 - **Encapsulation** in a shell
 
 ## **Introduction**
@@ -17,9 +16,8 @@ MQTT payload encryption on this link:
 
 https://www.hivemq.com/blog/mqtt-security-fundamentals-payload-encryption/
 
-This can be very useful as MQTT-TLS does not provide payload encryption and 
-often cannot be implemented on resource constraints systems such as MCU.
-
+This can be very useful as MQTT-TLS does not provide "true" E2EE and sometimes 
+cannot be implemented on resource constraints systems such as MCU.
 
 ![](doc/img/archi.png?raw=true "stack")
 
@@ -137,21 +135,21 @@ message is the same as MQTT, in this implementation it is set to 1024 bytes:
 
 ### Authentication
 Master client generates 2 ids 32 char long based on ASCII table, during 
-authentication those ids are encoded and sent with **INITREQ** to Slave. 
-Encoding so they aren't human readable, algorithm used in this implementation 
+authentication those ids are *obfuscated* and sent with **INITREQ** to Slave. 
+Obfuscated, so they aren't human readable, algorithm used in this implementation 
 is:
 
-*encoding* [reverse_bits_order -> xor]
+*obfuscation* [reverse_bits_order -> xor]
 
-*decoding* [xor -> reverse_bits_order]
+*clarification* [xor -> reverse_bits_order]
 
-This is a very simple way of encoding data and only serves as an example, it is 
-highly recommended that user has his own very **PRIVATE** algorithm for encoding 
-ids. Slave will then acknowledge with **INITACK**. Master then sends encoded 
-**AUTHREQ** with id_slave (could be the other way around with id_master) so 
-Slave can verify it and authenticate Master. Slave acknowledges with **AUTHACK** 
-and do the same with AUTHREQ, once Master verifies its received id_master, 
-authentication of both clients is done.
+This is a very simple way of obfuscating data and only serves as an example, it 
+is highly recommended that user has his own very **PRIVATE** algorithm for 
+obfuscation. Slave will then acknowledge with **INITACK**. Master then sends 
+obfuscated **AUTHREQ** with id_slave (could be the other way around with 
+id_master) so Slave can verify it and authenticate Master. Slave acknowledges 
+with **AUTHACK** and do the same with AUTHREQ, once Master verifies its received 
+id_master, authentication of both clients is done.
 
 ### Encryption
 After authentication Master will send **RDYREQ** with its public key to Slave,
@@ -173,4 +171,3 @@ the remote to notify it to end its session too.
 
 ## TODO in the near/far/very far/ future...
 - Digital signature
-- Session with multiple clients

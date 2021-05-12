@@ -482,7 +482,7 @@ int sts_init_sec(void)
                 concatenate(msg_out, STS_INITREQ);
                 concatenate(msg_out, (char*)id_master);
                 concatenate(msg_out, (char*)id_slave);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_obfuscate((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
@@ -501,7 +501,7 @@ int sts_init_sec(void)
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_AUTHREQ);
                 concatenate(msg_out, ctx.id_slave);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_obfuscate((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
@@ -522,7 +522,7 @@ int sts_init_sec(void)
                 TRACE("sts: Sending AUTHACK to slave...\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_AUTHACK);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_obfuscate((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
@@ -551,7 +551,7 @@ int sts_init_sec(void)
                 concatenate(msg_out, master_QX);
                 concatenate(msg_out, "Y");
                 concatenate(msg_out, master_QY);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_obfuscate((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
@@ -572,7 +572,7 @@ int sts_init_sec(void)
                 TRACE("sts: Sending RDYACK to slave\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_RDYACK);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_obfuscate((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
@@ -596,7 +596,7 @@ int sts_init_sec(void)
                 TRACE("sts: Sending INITACK to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_INITACK);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_obfuscate((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
@@ -613,7 +613,7 @@ int sts_init_sec(void)
                 TRACE("sts: Sending AUTHACK to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_AUTHACK);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_obfuscate((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
@@ -627,7 +627,7 @@ int sts_init_sec(void)
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_AUTHREQ);
                 concatenate(msg_out, ctx.id_master);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_obfuscate((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
@@ -648,7 +648,7 @@ int sts_init_sec(void)
                 TRACE("sts: Sending RDYACK to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_RDYACK);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_obfuscate((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
@@ -677,7 +677,7 @@ int sts_init_sec(void)
                 concatenate(msg_out, slave_QX);
                 concatenate(msg_out, "Y");
                 concatenate(msg_out, slave_QY);
-                sts_encode((unsigned char*)msg_out, STS_MSG_MAXLEN);
+                sts_obfuscate((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
