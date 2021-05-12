@@ -1,5 +1,5 @@
 mqtt_version  = 4
-ip   = 3.124.222.91
+ip   = 34.214.82.240
 port = 1883
 username = nosec
 password = nosec
