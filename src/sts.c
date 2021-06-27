@@ -45,21 +45,6 @@ static void _extract_pubkey(char *X, char *Y, struct sts_message *msg)
         memcpy(Y, &msg->data[idx_X + 2], idx_Y * sizeof(char));
 }
 
-static void _extract_ids(struct sts_message *msg)
-{
-        int i;
-        int idx;
-        for (i = 0; i < ID_SIZE - 1; i++) {
-                ctx.id_master[i] = msg->data[i];
-        }
-
-        idx = ID_SIZE - 1;
-        for (i = 0; i < ID_SIZE + 1; i++) {
-                ctx.id_slave[i] = msg->data[idx];
-                idx++;
-        }
-}
-
 int sts_load_config(const char *config)
 {
         FILE *fp;
@@ -128,6 +113,11 @@ int sts_load_config(const char *config)
                                 return -1;
                         }
 
+                } else if (strcmp(key, "id_master") == 0) {
+                        strcpy(ctx.id_master, value);
+                } else if (strcmp(key, "id_slave") == 0) {
+                        strcpy(ctx.id_slave, value);
+
                 } else {
                         ERROR("sts: wrong key(s) in config file, please "
                                         "check 'config_' examples\n");
@@ -182,9 +172,9 @@ void sts_msg_handlers(struct sts_message *msg)
 
                 /* receive INITREQ from master */
                 if (strcmp(msg->header, STS_INITREQ) == 0 && 
+                                strcmp(msg->data, "request") == 0 &&
                                 ctx.slave_flag == STS_STEP_0) {
                         TRACE("sts: Received INITREQ from master\n");
-                        _extract_ids(msg);
                         ctx.slave_flag = STS_STEP_1;
                         return;
                 }
@@ -193,7 +183,7 @@ void sts_msg_handlers(struct sts_message *msg)
                 if (strcmp(msg->header, STS_AUTHREQ) == 0 && 
                                 ctx.slave_flag == STS_STEP_1) {
                         TRACE("sts: Received AUTHREQ from master\n");
-                        if (strcmp(msg->data, ctx.id_slave) == 0) {
+                        if (strcmp(msg->data, ctx.id_master) == 0) {
                                 INFO("sts: Authentication SUCCESS\n");
                                 ctx.slave_flag = STS_STEP_2;
                                 return;
@@ -279,7 +269,7 @@ void sts_msg_handlers(struct sts_message *msg)
                 if (strcmp(msg->header, STS_AUTHREQ) == 0 && 
                                 ctx.master_flag == STS_STEP_2) {
                         TRACE("sts: Received AUTHREQ from slave\n");
-                        if (strcmp(msg->data, ctx.id_master) == 0) {
+                        if (strcmp(msg->data, ctx.id_slave) == 0) {
                                 INFO("sts: Authentication SUCCESS\n");
                                 ctx.master_flag = STS_STEP_3;
                                 return;
@@ -433,20 +423,6 @@ int sts_init_sec(void)
         char slave_QY[MPI_STRING_SIZE];
         char master_QX[MPI_STRING_SIZE];
         char master_QY[MPI_STRING_SIZE];
-        unsigned char id_master[ID_SIZE];
-        unsigned char id_slave[ID_SIZE];
-
-        /* generate ids on master side */
-        if (strcmp(ctx.sts_mode, STS_SECMASTER) == 0) {
-                memset(id_master, 0, sizeof(id_master));
-                memset(id_slave, 0, sizeof(id_slave));
-
-                genrand_str(id_master, ID_SIZE);
-                genrand_str(id_slave, ID_SIZE);
-
-                memcpy(ctx.id_master, id_master, sizeof(id_master));
-                memcpy(ctx.id_slave, id_slave, sizeof(id_slave));
-        }
 
         ctx.master_flag = STS_STEP_0;
         ctx.slave_flag = STS_STEP_0;
@@ -480,8 +456,7 @@ int sts_init_sec(void)
                 TRACE("sts: Sending INITREQ to slave\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_INITREQ);
-                concatenate(msg_out, (char*)id_master);
-                concatenate(msg_out, (char*)id_slave);
+                concatenate(msg_out, "request");
                 sts_obfuscate((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
                 ctx.no_print_out = 1;
@@ -500,7 +475,7 @@ int sts_init_sec(void)
                 TRACE("sts: Sending AUTHREQ to slave\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_AUTHREQ);
-                concatenate(msg_out, ctx.id_slave);
+                concatenate(msg_out, ctx.id_master);
                 sts_obfuscate((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
                 ctx.no_print_out = 1;
@@ -626,7 +601,7 @@ int sts_init_sec(void)
                 TRACE("sts: Sending AUTHREQ to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 concatenate(msg_out, STS_AUTHREQ);
-                concatenate(msg_out, ctx.id_master);
+                concatenate(msg_out, ctx.id_slave);
                 sts_obfuscate((unsigned char*)msg_out, STS_MSG_MAXLEN);
 
                 ctx.no_print_out = 1;

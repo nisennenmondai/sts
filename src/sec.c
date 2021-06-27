@@ -5,8 +5,8 @@
 #include "log.h"
 #include "tools.h"
 
-#include "ctr_drbg.h"
-#include "entropy.h"
+#include "mbedtls/ctr_drbg.h"
+#include "mbedtls/entropy.h"
 
 int sts_verify_keylen(const unsigned char *key, size_t size, size_t len)
 {

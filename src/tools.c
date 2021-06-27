@@ -1,29 +1,5 @@
 #include "tools.h"
 
-void genrand_str(unsigned char *str, size_t size)
-{
-        size_t n;
-        int key;
-        struct timeval tv;
-        unsigned long time_in_micros;
-        /* ascii */
-        const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJK0123456789"
-                "0!@#$%^&*()-=['/<>']_+";
-        gettimeofday(&tv, NULL);
-        time_in_micros = 1000000 * tv.tv_sec + tv.tv_usec;
-
-        srand((unsigned)time_in_micros);
-
-        if (size) {
-                --size;
-                for (n = 0; n < size; n++) {
-                        key = rand() % (int) (sizeof charset - 1);
-                        str[n] = charset[key];
-                }
-                str[size] = '\0';
-        }
-}
-
 void reverse_bits_order(unsigned char *b, size_t size)
 {
         size_t i;

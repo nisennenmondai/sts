@@ -5,13 +5,6 @@
 #include <sys/time.h>
 
 /*
- * @brief               generate a random string based on ascii 128 char table.
- * @param str           array to be filled.
- * @param size          size of array.
- */
-void genrand_str(unsigned char *str, size_t size);
-
-/*
  * @brief               reverse bits order of array.
  * @param b             data array.
  * @param size          size of array.

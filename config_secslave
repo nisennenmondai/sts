@@ -1,5 +1,5 @@
 mqtt_version  = 4
-ip   = 34.214.82.240
+ip   = 34.211.84.46
 port = 1883
 username = slave
 password = slave
@@ -8,3 +8,5 @@ pubtop   = s2m
 clientid = test_slave
 sts_mode = slave
 aes      = cbc
+id_master = 93U5#@w5OM*DfPhT@Ao0D4zxUJ6lVe&Ks
+id_slave  = usQ1C650ZqQRrOUZ5wuLzHbn#jtKT!*Jw

@@ -36,11 +36,16 @@ STS uses a number of open source projects to work properly:
 
 ## **Installation**
 
-STS is standalone and should work with any Linux distrib.
-
 ```sh
-./build
+make deps
+make
+sudo make install
+make test
 ```
+- **make deps** will download and build *paho-mqtt* and *mbedtls*
+- **make** will build *sts*
+- **sudo make install** will install *paho-mqtt* and *mbedtls* libraries
+- **make test** will build *tests*
 
 ## **HOWTO**
 STS can be used in 2 modes: with or without encryption: 
@@ -79,6 +84,8 @@ https://www.hivemq.com/public-mqtt-broker/
 | **clientid**  | mqtt id  |
 | **sts_mode**  | nosec, master, slave  |
 | **aes**  | null, ecb, cbc  |
+| **id_master**  | defined by user  |
+| **id_slave**  | defined by user  |
 
 ### STS no encryption
 ```sh
@@ -134,24 +141,27 @@ message is the same as MQTT, in this implementation it is set to 1024 bytes:
 ![Alt text](doc/img/connection_protocol.png?raw=true "conn")
 
 ### Authentication
-*master* generates 2 IDs 32 bytes long based on ASCII table and sends 
-**INITREQ** to *slave*, during authentication all data is *obfuscated*. 
-Obfuscated, so they aren't human readable, algorithm used in this implementation 
-is:
+*master* initiates authentication by sending **INITREQ** to *slave* with a
+"request" message, *slave* acknowledges sending **INITACK**, now *master* 
+proceeds to send **AUTHREQ** attaching his ID, upon receipt *slave* will verify 
+if ID matches and authenticates *master* sending **AUTHACK**, if ID does not 
+matches, it will wait for timer to end and return an error. It is now *slave*'s 
+turn to send **AUTHREQ**, once *master* verifies if ID matches it will 
+acknowledge sending **AUTHACK**. From now on both clients are authenticated and 
+can proceed to cryptographic keys exchange.
+
+During authentication all data are *obfuscated*. Obfuscated, so they aren't 
+human readable, algorithm used in this implementation is:
 
 *obfuscation* [reverse_bits_order -> xor]
 
 *clarification* [xor -> reverse_bits_order]
 
 This is a very simple way of obfuscating data and only serves as an example, it 
-is highly recommended that user has his own very **PRIVATE** algorithm for 
-obfuscation to avoid usurpation attack. *slave* acknowledges sending **INITACK**
-, now *master* proceeds to send **AUTHREQ** attaching *slave*'s ID, upon receipt 
-*slave* will verify if ID matches and authenticate *master* sending **AUTHACK**, 
-if not it will standby and not return anything until timer is up. It is then 
-*slave*'s turn to send **AUTHREQ**, once *master* verifies if ID matches it will 
-acknowledge with **AUTHACK**. From now on both clients are authenticated and can
-proceed to cryptographic keys exchange.
+is highly recommended that user has his own very **PRIVATE** algorithm. The
+point of this is to avoid usurpation attacks, even if IDs get stolen the
+attacker wouldn't be able to authenticate itself because he does not possess the 
+proper algorithm for IDs exchange during authentication phase.
 
 ### Key Exchange and Shared Secret
 Once authentication phase is done *master* sends **RDYREQ** with its public key, 

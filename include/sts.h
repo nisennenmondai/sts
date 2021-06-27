@@ -4,8 +4,8 @@
 #include "MQTTLinux.h"
 #include "MQTTClient.h"
 
-#include "aes.h"
-#include "ecdh.h"
+#include "mbedtls/aes.h"
+#include "mbedtls/ecdh.h"
 
 /* sts config */
 #define CONF_KEY_MAXLEN 16

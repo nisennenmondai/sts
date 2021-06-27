@@ -3,8 +3,8 @@
 
 #include "sts.h"
 
-#include "aes.h"
-#include "ecdh.h"
+#include "mbedtls/aes.h"
+#include "mbedtls/ecdh.h"
 
 /*
  * @brief               encrypt data using aes-ecb block cipher mode.
