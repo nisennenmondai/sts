@@ -1,5 +1,5 @@
 mqtt_version  = 4
-ip   = 34.211.84.46
+url  = broker.hivemq.com 
 port = 1883
 username = nosec
 password = nosec

@@ -63,8 +63,8 @@ int sts_load_config(const char *config)
         while (fscanf(fp, "%s %s %s ", key, cmp, value) != EOF) {
                 if (strcmp(key, "mqtt_version") == 0) {
                         ctx.mqtt_version = atoi(value);
-                } else if (strcmp(key, "ip") == 0) {
-                        strcpy(ctx.ip, value);
+                } else if (strcmp(key, "url") == 0) {
+                        strcpy(ctx.url, value);
                 } else if (strcmp(key, "port") == 0) {
                         ctx.port = atoi(value);
                 } else if (strcmp(key, "username") == 0) {
@@ -705,7 +705,7 @@ void sts_reset_ctx(void)
         memset(ctx.id_slave,    0, sizeof(ctx.id_slave));
         memset(ctx.sts_mode,    0, sizeof(ctx.sts_mode));
         memset(ctx.aes,         0, sizeof(ctx.aes));
-        memset(ctx.ip,          0, sizeof(ctx.ip));
+        memset(ctx.url,         0, sizeof(ctx.url));
 }
 
 struct sts_context *sts_get_ctx(void)

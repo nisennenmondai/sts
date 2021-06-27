@@ -116,7 +116,7 @@ int sts_status(char **argv)
         INFO("sts: | MQTT                                     |\n");
         INFO("sts: +==========================================+\n");
         INFO("sts: | mqtt version:    %u\n", ctx->mqtt_version);
-        INFO("sts: | broker_ip:       %s\n", ctx->ip);
+        INFO("sts: | broker_url:      %s\n", ctx->url);
         INFO("sts: | broker_port:     %u\n", ctx->port);
         INFO("sts: | username:        %s\n", ctx->username);
         INFO("sts: | password:        %s\n", ctx->password);

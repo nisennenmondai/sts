@@ -154,7 +154,7 @@ int mqtt_connect(void)
         data.password.cstring = ctx->password;
         data.willFlag = 0;
 
-        ret = NetworkConnect(&ctx->network, ctx->ip, ctx->port);
+        ret = NetworkConnect(&ctx->network, ctx->url, ctx->port);
         if (ret < 0) {
                 ERROR("sts: could not connect to the network\n");
                 return -1;
@@ -165,7 +165,7 @@ int mqtt_connect(void)
                 ERROR("sts: could not connect to broker\n");
                 return -1;
         }
-        INFO("sts: connected to broker %s\n", ctx->ip);
+        INFO("sts: connected to broker %s\n", ctx->url);
         return 0;
 }
 

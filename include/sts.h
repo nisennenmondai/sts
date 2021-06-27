@@ -122,7 +122,7 @@ struct sts_context {
         char id_slave[CONF_VAL_MAXLEN];
         char sts_mode[CONF_VAL_MAXLEN];
         char aes[CONF_VAL_MAXLEN];
-        char ip[16];
+        char url[CONF_VAL_MAXLEN];
         Network network;
         MQTTClient client;
         mbedtls_aes_context host_aes_ctx_enc;

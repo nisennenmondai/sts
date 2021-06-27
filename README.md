@@ -66,16 +66,16 @@ client, nothing aside of those can decrypt the data and that's the all point.
 STS needs to use configuration files, those contain parameters for MQTT and STS, 
 the ones provided work just fine, they use a public broker: 
 
-https://www.emqx.io/mqtt/public-mqtt5-broker
+**broker.hivemq.com**
 
 If can't connect try this one:
 
-https://www.hivemq.com/public-mqtt-broker/
+**broker.emqx.io**
 
 | KEY  | VALUE (128 char max)| 
 | ------------- | ------------- |
 | **mqtt_version** | 3 or 4  |
-| **ip**  | broker ip  |
+| **url**  | broker url  |
 | **port**  | usually 1883 for TCP  |
 | **username**  | if broker requires login  |
 | **password**  | if broker requires login  |
