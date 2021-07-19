@@ -437,7 +437,7 @@ int sts_init_sec(void)
         mbedtls_aes_init(&ctx.host_aes_ctx_enc);
         mbedtls_ecdh_init(&ctx.host_ecdh_ctx);
 
-        ret = mbedtls_ecdh_setup(&ctx.host_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
+        ret = mbedtls_ecdh_setup(&ctx.host_ecdh_ctx, MBEDTLS_ECP_DP_CURVE25519);
         if (ret != 0) {
                 ERROR("sts: mbedtls_ecdh_setup()\n");
                 return -1;

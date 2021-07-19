@@ -5,6 +5,7 @@
 
 #include "mbedtls/aes.h"
 #include "mbedtls/ecdh.h"
+#include "mbedtls/sha256.h"
 
 /*
  * @brief               encrypt data using aes-ecb block cipher mode.
@@ -81,6 +82,14 @@ int sts_verify_keylen(const unsigned char *key, size_t size, size_t len);
  * @return              -1 if fails
  */
 int sts_compute_shared_secret(char *X, char *Y, struct sts_context *ctx);
+
+/*
+ * @brief               verify integrity
+ * @digest_a            digest received
+ * @digest_b            digest computed
+ * @return              -1 if fails
+ */
+int sts_verify_integrity(unsigned char *digest_a, unsigned char *digest_b);
 
 /*
  * @brief               obfuscate data.

@@ -108,7 +108,7 @@ int sts_compute_shared_secret(char *X, char *Y, struct sts_context *ctx)
         ret = sts_verify_keylen(ctx->derived_key, sizeof(ctx->derived_key), 
                         ECDH_KEYSIZE_BITS);
         if (ret != 0) {
-                WARN("sts: derived key != %d bits in length (only %d bits), "
+                ERROR("sts: derived key != %d bits in length (only %d bits), "
                                 "something went wrong, start a new session\n", 
                                 ECDH_KEYSIZE_BITS, ret);
                 return -1;
@@ -221,4 +221,22 @@ int sts_decrypt_aes_cbc(mbedtls_aes_context *ctx, unsigned char *iv,
         ret = mbedtls_aes_crypt_cbc(ctx, MBEDTLS_AES_DECRYPT, cbc_len, iv, 
                         input, output);
         return ret;
+}
+
+int sts_verify_integrity(unsigned char *digest_a, unsigned char *digest_b)
+{
+        int i;
+        int idx;
+        for (i = 0; i < 32; i++) {
+                if (digest_a[i] == digest_b[i]) {
+                        idx++;
+                        if (idx == 31) {
+                                break;
+                        }
+                        continue;
+                } else {
+                        return -1;
+                }
+        }
+        return 0;
 }

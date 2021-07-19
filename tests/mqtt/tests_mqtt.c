@@ -74,6 +74,7 @@ void mqtt_test(void)
         } else {
                 TESTS("TESTS FAILED: %d/%d\n", count, NUMBER_TESTS);
         }
+        printf("\n");
 }
 
 int main(void)

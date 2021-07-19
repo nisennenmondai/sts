@@ -2,16 +2,16 @@
 #include "sts.h"
 #include "sec.h"
 
-#define NUMBER_TESTS 13
+#define NUMBER_TESTS 3
 
-void ecdh_aes_ecb_test(void)
+void sha256_test(void)
 {
         TESTS("+================================================+\n");
-        TESTS("|           ECDH CURVE25519 - AES-ECB            |\n");
+        TESTS("|                    SHA256                      |\n");
         TESTS("+================================================+\n");
         size_t size;
         size_t olen;
-        size_t ecb_len;
+        size_t cbc_len;
         int ret;
         int count = 0;
 
@@ -30,82 +30,60 @@ void ecdh_aes_ecb_test(void)
         mbedtls_ecdh_init(&host_ecdh_ctx);
         mbedtls_ecdh_init(&remote_ecdh_ctx);
 
-        /* test 1.0 */
+        unsigned char digest_enc[32];
+        unsigned char digest_dec[32];
+
         ret = mbedtls_ecdh_setup(&host_ecdh_ctx, MBEDTLS_ECP_DP_CURVE25519);
         if (ret != 0) {
-                TESTS("test 1.0: mbedtls_ecdh_setup host FAILED!\n");
-        } else {
-                count++;
-                TESTS("test 1.0: mbedtls_ecdh_setup host OK!\n");
+                TESTS("mbedtls_ecdh_setup()\n");
+                count--;
         }
-        /* test 1.1 */
         ret = mbedtls_ecdh_setup(&remote_ecdh_ctx, MBEDTLS_ECP_DP_CURVE25519);
         if (ret != 0) {
-                TESTS("test 1.1: mbedtls_ecdh_setup remote FAILED!\n");
-        } else {
-                count++;
-                TESTS("test 1.1: mbedtls_ecdh_setup remote OK!\n");
+                TESTS("mbedtls_ecdh_setup()\n");
+                count--;
         }
 
-        /* test 2.0 */
         ret = mbedtls_ecdh_gen_public(&host_ecdh_ctx.grp, &host_ecdh_ctx.d,
                         &host_ecdh_ctx.Q, sts_drbg, NULL);
         if (ret != 0) {
-                TESTS("test 2.0: mbedtls_ecdh_gen_public host FAILED!\n");
-        } else {
-                count++;
-                TESTS("test 2.0: mbedtls_ecdh_gen_public host OK!\n");
+                TESTS("mbedtls_ecdh_gen_public()\n");
+                count--;
         }
 
-        /* test 2.1 */
         ret = mbedtls_ecdh_gen_public(&remote_ecdh_ctx.grp, &remote_ecdh_ctx.d,
                         &remote_ecdh_ctx.Q, sts_drbg, NULL);
         if (ret != 0) {
-                TESTS("test 2.1: mbedtls_ecdh_gen_public remote FAILED!\n");
-        } else {
-                count++;
-                TESTS("test 2.1: mbedtls_ecdh_gen_public remote OK!\n");
+                TESTS("mbedtls_ecdh_gen_public()\n");
+                count--;
         }
 
-        /* test 3.0 */
         ret = mbedtls_ecp_copy(&host_ecdh_ctx.Qp, &remote_ecdh_ctx.Q);
         if (ret != 0) {
-                TESTS("test 3.0: mbedtls_ecp_copy host FAILED!\n");
-        } else {
-                count++;
-                TESTS("test 3.0: mbedtls_ecp_copy host OK!\n");
+                TESTS("mbedtls_ecp_copy()\n");
+                count--;
         }
 
-        /* test 3.1 */
         ret = mbedtls_ecp_copy(&remote_ecdh_ctx.Qp, &host_ecdh_ctx.Q);
         if (ret != 0) {
-                TESTS("test 3.1: mbedtls_ecp_copy remote FAILED!\n");
-        } else {
-                count++;
-                TESTS("test 3.1: mbedtls_ecp_copy remote OK!\n");
+                TESTS("mbedtls_ecp_copy()\n");
+                count--;
         }
 
-        /* test 4.0 */
         ret = mbedtls_ecdh_calc_secret(&host_ecdh_ctx, &olen, host_derived_key,
                         sizeof(host_derived_key), sts_drbg, NULL);
         if (ret != 0) {
-                TESTS("test 4.0: mbedtls_ecdh_calc_secret host FAILED!\n");
-        } else {
-                count++;
-                TESTS("test 4.0: mbedtls_ecdh_calc_secret host OK!\n");
+                TESTS("mbedtls_ecdh_calc_secret()\n");
+                count--;
         }
 
-        /* test 4.1 */
         ret = mbedtls_ecdh_calc_secret(&remote_ecdh_ctx, &olen, remote_derived_key,
                         sizeof(remote_derived_key), sts_drbg, NULL);
         if (ret != 0) {
-                TESTS("test 4.1: mbedtls_ecdh_calc_secret remote FAILED!\n");
-        } else {
-                count++;
-                TESTS("test 4.1: mbedtls_ecdh_calc_secret remote OK!\n");
+                TESTS("mbedtls_ecdh_calc_secret()\n");
+                count--;
         }
 
-        /* test 5.0 */
         mbedtls_aes_init(&host_aes_ctx);
         mbedtls_aes_init(&remote_aes_ctx);
         memset(message, 0, STS_MSG_MAXLEN);
@@ -114,54 +92,79 @@ void ecdh_aes_ecb_test(void)
 
         size = strlen(msg);
         memcpy(message, msg, size);
+
         ret = mbedtls_aes_setkey_enc(&host_aes_ctx, host_derived_key,
                         ECDH_KEYSIZE_BITS);
         if (ret != 0) {
-                TESTS("test 5.0: mbedtls_aes_setkey_enc host FAILED!\n");
-        } else {
-                count++;
-                TESTS("test 5.0: mbedtls_aes_setkey_enc host OK!\n");
+                TESTS("mbedtls_aes_setkey_enc()\n");
+                count--;
         }
-        /* test 5.1 */
+
+        /* hash before enc */
+        memset(digest_enc, 0, sizeof(digest_enc));
+        mbedtls_sha256(message, sizeof(message), digest_enc, 0);
+
+        /* test 1.0 */
+        if (sizeof(digest_enc) == (size_t)32) {
+                TESTS("test 1.0: size of digest_enc OK!\n");
+                count++;
+        } else {
+                TESTS("test 1.0: size of digest_enc FAILED!\n");
+                count--;
+        }
+
         ret = mbedtls_aes_setkey_dec(&remote_aes_ctx, remote_derived_key,
                         ECDH_KEYSIZE_BITS);
+
         if (ret != 0) {
-                TESTS("test 5.1: mbedtls_aes_setkey_enc remote FAILED!\n");
-        } else {
-                count++;
-                TESTS("test 5.1: mbedtls_aes_setkey_enc remote OK!\n");
+                TESTS("mbedtls_aes_setkey_enc()\n");
+                count--;
         }
 
-        ret = sts_encrypt_aes_ecb(&host_aes_ctx, message, enc_msg, size, &ecb_len);
+        ret = sts_encrypt_aes_cbc(&host_aes_ctx, host_derived_key, message, enc_msg, 
+                        size, &cbc_len);
         if (ret != 0) {
-                TESTS("test 6.0: sts_encrypt_aes_ecb FAILED\n");
-        } else {
-                count++;
-                TESTS("test 6.0: sts_encrypt_aes_ecb OK\n");
+                TESTS("sts_encrypt_aes_cbc()\n");
+                count--;
         }
 
-        ret = sts_decrypt_aes_ecb(&remote_aes_ctx, enc_msg, dec_msg, ecb_len);
+        ret = sts_decrypt_aes_cbc(&remote_aes_ctx, remote_derived_key, enc_msg, 
+                        dec_msg, cbc_len);
+
         if (ret != 0) {
-                TESTS("test 6.1: sts_decrypt_aes_ecb FAILED\n");
-        } else {
-                count++;
-                TESTS("test 6.1: sts_decrypt_aes_cbc OK\n");
+                TESTS("sts_decrypt_aes_cbc()\n");
+                count--;
         }
 
-        /* test 6.0 */
-        ret = strcmp((char*)message, (char*)dec_msg);
-        if (ret < 0) {
-                TESTS("test 7.0: encryption - decryption FAILED!\n");
-        } else {
+        /* hash after dec */
+        memset(digest_dec, 0, sizeof(digest_dec));
+        mbedtls_sha256(dec_msg, sizeof(dec_msg), digest_dec, 0);
+
+        /* test 2.0 */
+        if (sizeof(digest_dec) == 32) {
+                TESTS("test 2.0: size of digest_dec OK!\n");
                 count++;
-                TESTS("test 7.0: encryption - decryption OK!\n\n");
+        } else {
+                TESTS("test 2.0: size of digest_dec FAILED!\n");
+                count--;
+        }
+
+        /* test 3.0 */
+        ret = sts_verify_integrity(digest_enc, digest_dec);
+        if (ret == 0) {
+                TESTS("test 3.0: hash comparison OK!\n");
+                count++;
+        } else {
+                TESTS("test 3.0: hash comparison FAILED!\n");
+                count--;
         }
 
         /* free */
-        mbedtls_ecdh_free(&host_ecdh_ctx);
-        mbedtls_ecdh_free(&remote_ecdh_ctx);
         mbedtls_aes_free(&host_aes_ctx);
         mbedtls_aes_free(&remote_aes_ctx);
+        mbedtls_ecdh_free(&host_ecdh_ctx);
+        mbedtls_ecdh_free(&remote_ecdh_ctx);
+        printf("\n");
 
         if (count == NUMBER_TESTS) {
                 TESTS("TESTS PASSED: %d/%d\n", count, NUMBER_TESTS);
@@ -172,5 +175,5 @@ void ecdh_aes_ecb_test(void)
 
 int main(void)
 {
-        ecdh_aes_ecb_test();
+        sha256_test();
 }

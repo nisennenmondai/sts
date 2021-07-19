@@ -9,4 +9,7 @@ echo ""
 
 cd ../mqtt/
 ./tests_mqtt
+
+cd ../sha256/
+./sha256
 echo ""
