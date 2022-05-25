@@ -4,7 +4,7 @@
 ## **Features**
 
 - **Lightweight MQTT client** for Embedded Linux
-- **Authentication** scheme
+- **Authentication**
 - **End-to-End Payload Encryption** with symmetric cipher
 - **Encapsulation** in a shell for easy of use and possible modules development
 
@@ -20,7 +20,7 @@ https://www.hivemq.com/blog/mqtt-security-fundamentals-payload-encryption/
 - Dealing with untrusted broker
 - Use of constrained devices
 - Need for secure E2EE of application data
-- Need for an additional layer of security working in conjunction with TLS
+- Need for an additional layer of security working in addition with TLS
 
 ![](doc/img/archi.png?raw=true "stack")
 
@@ -50,11 +50,10 @@ make test
 ## **HOWTO**
 STS can be used in 2 modes: with or without encryption: 
 **No encryption** means a simple MQTT client with minimal features like 
-subscribing to a topic and publishing messages. I believe there is no need to go 
-for STS for that kind of use and so this part will not be improved.
+subscribing to a topic and publishing messages. 
 
-**With encryption** means that you can send encrypted messages to an other 
-client, nothing aside of those can decrypt the data and that's the all point. 
+**With encryption** means that an end-2-end encrypted communication is
+established
 
 **MQTT features that aren't implemented are:**
 - Quality Of Service
@@ -150,19 +149,6 @@ turn to send **AUTHREQ**, once *master* verifies if ID matches it will
 acknowledge sending **AUTHACK**. From now on both clients are authenticated and 
 can proceed to cryptographic keys exchange.
 
-During authentication all data are *obfuscated*. Obfuscated, so they aren't 
-human readable, algorithm used in this implementation is:
-
-*obfuscation* [reverse_bits_order -> xor]
-
-*clarification* [xor -> reverse_bits_order]
-
-This is a very simple way of obfuscating data and only serves as an example, it 
-is highly recommended that user has his own very **PRIVATE** algorithm. The
-point of this is to avoid usurpation attacks, even if IDs get stolen the
-attacker wouldn't be able to authenticate itself because he does not possess the 
-proper algorithm for IDs exchange during authentication phase.
-
 ### Key Exchange and Shared Secret
 Once authentication phase is done *master* sends **RDYREQ** with its public key, 
 upon receipt *slave* computes the shared secret and acknowledges with 
@@ -177,8 +163,5 @@ the remote client to notify it to terminate its session too.
 
 ### Algorithms
 Key exchange agreement protocol used is **ECDH**, elliptic curve is 
-**SECP256K1,** finally encryption used is **AES**, 2 block cipher modes 
-operation are available, **ECB** and **CBC**, I don't see any reason to use ECB 
-over CBC as it leaks information with obvious pattern on repeating data. 
-Regarding CBC in this implementation initialization vector is static for the 
-session, it uses the computed shared secret.
+**CURVE25519,** finally encryption used is **AES**, 2 block cipher modes 
+operation are available, **ECB** and **CBC**.

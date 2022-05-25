@@ -28,23 +28,6 @@ int sts_verify_keylen(const unsigned char *key, size_t size, size_t len)
         return 0;
 }
 
-/* 
- * encode/decode data during authentication so it is not human readable, this 
- * algo is very simple and serves only as an example, it is recommanded to have 
- * your own PRIVATE algorithm.
- */
-void sts_obfuscate(unsigned char *data, size_t size)
-{
-        reverse_bits_order(data, size);
-        xor_bits(data, size);
-}
-
-void sts_clarify(unsigned char *data, size_t size)
-{
-        xor_bits(data, size);
-        reverse_bits_order(data, size);
-}
-
 int sts_drbg(void *rng_state, unsigned char *output, size_t len)
 {
         int ret;
@@ -221,22 +204,4 @@ int sts_decrypt_aes_cbc(mbedtls_aes_context *ctx, unsigned char *iv,
         ret = mbedtls_aes_crypt_cbc(ctx, MBEDTLS_AES_DECRYPT, cbc_len, iv, 
                         input, output);
         return ret;
-}
-
-int sts_verify_integrity(unsigned char *digest_a, unsigned char *digest_b)
-{
-        int i;
-        int idx;
-        for (i = 0; i < 32; i++) {
-                if (digest_a[i] == digest_b[i]) {
-                        idx++;
-                        if (idx == 31) {
-                                break;
-                        }
-                        continue;
-                } else {
-                        return -1;
-                }
-        }
-        return 0;
 }

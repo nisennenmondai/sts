@@ -40,8 +40,6 @@ static void _mqtt_on_msg_recv(MessageData *data)
                                 strcmp(ctx->sts_mode, STS_SECMASTER) == 0 || 
                                 strcmp(ctx->sts_mode, STS_SECSLAVE) == 0)) {
                 char *msg_inc = NULL;
-                sts_clarify((unsigned char*)data->message->payload, 
-                                STS_MSG_MAXLEN);
                 msg_inc = calloc((size_t)data->message->payloadlen + 1, 
                                 sizeof(char));
                 memcpy(msg_inc, data->message->payload, 

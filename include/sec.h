@@ -83,26 +83,4 @@ int sts_verify_keylen(const unsigned char *key, size_t size, size_t len);
  */
 int sts_compute_shared_secret(char *X, char *Y, struct sts_context *ctx);
 
-/*
- * @brief               verify integrity
- * @digest_a            digest received
- * @digest_b            digest computed
- * @return              -1 if fails
- */
-int sts_verify_integrity(unsigned char *digest_a, unsigned char *digest_b);
-
-/*
- * @brief               obfuscate data.
- * @param data          data to be encoded.
- * @param size          size of data.
- */
-void sts_obfuscate(unsigned char *data, size_t size);
-
-/*
- * @brief               clarify data.
- * @param data          data to be decoded.
- * @param size          size of data.
- */
-void sts_clarify(unsigned char *data, size_t size);
-
 #endif /* SEC_H */
