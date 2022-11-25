@@ -7,7 +7,7 @@
 void ecdh_aes_cbc_test(void)
 {
         TESTS("+================================================+\n");
-        TESTS("|           ECDH SECP256K1 - AES-CBC             |\n");
+        TESTS("|           ECDH SECP256K1 - AES-CBC-256         |\n");
         TESTS("+================================================+\n");
         size_t size;
         size_t olen;
