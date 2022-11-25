@@ -13,15 +13,14 @@ CFLAGS += -Ilib/paho-mqtt/MQTTClient-C/src/linux/
 CFLAGS += -Ilib/paho-mqtt/MQTTPacket/src/
 CFLAGS += -Ilib/mbedtls/include/
 
-LDLIBS += -Llib/paho-mqtt/MQTTClient-C/src/ -lpaho-embed-mqtt3cc
-LDLIBS += -Llib/mbedtls/library/ -lmbedcrypto
+LDLIBS += -lpaho-embed-mqtt3cc
+LDLIBS += -lmbedcrypto
 LDLIBS += -lpthread
 LDLIBS += -lm
 
-
 .PHONY: all clean
 
-all: $(EXE) 
+all: $(EXE)
 
 $(EXE): $(OBJ) | $(BIN_DIR)
 	$(CC) $^ $(LDLIBS) -o $@
@@ -36,9 +35,6 @@ deps:
 	git submodule update --init --recursive
 	cd lib/paho-mqtt/; cmake .; make
 	cd lib/mbedtls/; cmake .; make
-
-test:
-	cd tests/; make
 
 install:
 	cd lib/paho-mqtt; make install

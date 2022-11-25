@@ -7,7 +7,7 @@
 void ecdh_aes_ecb_test(void)
 {
         TESTS("+================================================+\n");
-        TESTS("|           ECDH CURVE25519 - AES-ECB            |\n");
+        TESTS("|           ECDH SECP256K1 - AES-ECB             |\n");
         TESTS("+================================================+\n");
         size_t size;
         size_t olen;
@@ -31,7 +31,7 @@ void ecdh_aes_ecb_test(void)
         mbedtls_ecdh_init(&remote_ecdh_ctx);
 
         /* test 1.0 */
-        ret = mbedtls_ecdh_setup(&host_ecdh_ctx, MBEDTLS_ECP_DP_CURVE25519);
+        ret = mbedtls_ecdh_setup(&host_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
         if (ret != 0) {
                 TESTS("test 1.0: mbedtls_ecdh_setup host FAILED!\n");
         } else {
@@ -39,7 +39,7 @@ void ecdh_aes_ecb_test(void)
                 TESTS("test 1.0: mbedtls_ecdh_setup host OK!\n");
         }
         /* test 1.1 */
-        ret = mbedtls_ecdh_setup(&remote_ecdh_ctx, MBEDTLS_ECP_DP_CURVE25519);
+        ret = mbedtls_ecdh_setup(&remote_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
         if (ret != 0) {
                 TESTS("test 1.1: mbedtls_ecdh_setup remote FAILED!\n");
         } else {

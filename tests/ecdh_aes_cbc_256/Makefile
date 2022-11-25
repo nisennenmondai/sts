@@ -14,8 +14,8 @@ CFLAGS += -I../../lib/paho-mqtt/MQTTClient-C/src/linux/
 CFLAGS += -I../../lib/paho-mqtt/MQTTPacket/src/
 CFLAGS += -I../../lib/mbedtls/include/mbedtls/
 
-LDLIBS += -L../../lib/paho-mqtt/MQTTClient-C/src/ -lpaho-embed-mqtt3cc
-LDLIBS += -L../../lib/mbedtls/library/ -lmbedcrypto
+LDLIBS += -lpaho-embed-mqtt3cc
+LDLIBS += -lmbedcrypto
 LDLIBS += -lpthread
 LDLIBS += -lm
 
@@ -37,6 +37,6 @@ $(OBJ_DIR):
 	mkdir -p $@
 
 clean:
-	@$(RM) -rf $(OBJ_DIR) $(OBJ) $(EXE) 
+	@$(RM) -rf $(OBJ_DIR) $(OBJ) $(EXE)
 
 -include $(OBJ:.o=.d)

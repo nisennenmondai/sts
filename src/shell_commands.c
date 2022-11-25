@@ -142,8 +142,8 @@ int sts_status(char **argv)
                 INFO("sts: | ENCRYPTION                               |\n");
                 INFO("sts: +==========================================+\n");
                 INFO("sts: | key agreement protocole: ECDH\n");
-                INFO("sts: | elliptic curve:          Curve25519\n");
-                INFO("sts: | encryption:              AES-%s-256\n", ctx->aes);
+                INFO("sts: | elliptic curve:          SECP256K1\n");
+                INFO("sts: | symmetric cipher:        AES-%s-256\n", ctx->aes);
                 INFO("sts: +==========================================+\n");
         } else {
                 INFO("sts: +==========================================+\n");

@@ -1,5 +1,6 @@
 #!/bin/sh
-cd tests/ecdh_aes_cbc_256/
+cd tests/; make
+cd ecdh_aes_cbc_256/
 ./ecdh_aes_cbc_256
 echo ""
 
