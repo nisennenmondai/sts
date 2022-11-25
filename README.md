@@ -40,12 +40,10 @@ STS uses a number of open source projects to work properly:
 make deps
 make
 sudo make install
-make test
 ```
 - **make deps** will download and build *paho-mqtt* and *mbedtls*
 - **make** will build *sts*
 - **sudo make install** will install *paho-mqtt* and *mbedtls* libraries
-- **make test** will build *tests*
 
 ## **HOWTO**
 STS can be used in 2 modes: with or without encryption: 
@@ -93,7 +91,7 @@ cd bin/
 ```
 Start a session and send messages
 ```sh
-start ../config_nosec
+start ../configs/config_nosec
 send my message
 ```
 Stop a session
@@ -106,10 +104,10 @@ stop
 Protocol is designed as so you need to start a session with *slave* first then 
 with *master*.
 ```sh
-start ../config_secslave
+start ../configs/config_secslave
 ```
 ```sh
-start ../config_secmaster
+start ../configs/config_secmaster
 ```
 Once encryption is established you can send encrypted message with:
 ```sh
