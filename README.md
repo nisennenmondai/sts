@@ -163,5 +163,5 @@ the remote client to notify it to terminate its session too.
 
 ### Algorithms
 Key exchange agreement protocol used is **ECDH**, elliptic curve is 
-**CURVE25519,** finally encryption used is **AES**, 2 block cipher modes 
+**SECP256K1,** finally encryption used is **AES**, 2 block cipher modes 
 operation are available, **ECB** and **CBC**.
