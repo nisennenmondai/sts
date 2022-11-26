@@ -1,5 +1,3 @@
-#include <sys/wait.h>
-
 #include "log.h"
 #include "sts.h"
 #include "shell.h"
@@ -41,7 +39,7 @@ static int sts_num_builtins(void)
         return sizeof(builtin_cmd) / sizeof(char *);
 }
 
-static void _sig_handler(int signum)
+void sts_sig_handler(int signum)
 {
         struct sts_context *ctx = sts_get_ctx();
 
@@ -67,7 +65,7 @@ static void _sig_handler(int signum)
         }
 }
 
-static void sts_welcome(void)
+void sts_welcome(void)
 {
         printf("+--------------------------------------------------------------+\n");
         printf("|                    Secure Telemetry Shell                    |\n");
@@ -215,7 +213,7 @@ static int sts_execute(char **argv)
 }
 
 /* loop getting input and executing it */
-static void sts_loop(void)
+void sts_loop(void)
 {
         int status;
         char *line;
@@ -254,15 +252,4 @@ int sts_exit(char **argv)
 {
         (void)argv;
         return STS_EXIT;
-}
-
-int main(void)
-{
-        signal(SIGINT, _sig_handler);
-        signal(SIGUSR1, _sig_handler);
-        signal(SIGALRM, _sig_handler);
-        sts_welcome();
-        sts_loop();
-
-        return 0;
 }
