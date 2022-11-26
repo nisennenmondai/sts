@@ -37,6 +37,7 @@ build-tests:
 run-tests:
 	cd tests/ecdh_aes_ecb_256/bin; ./ecdh_aes_ecb_256
 	cd tests/ecdh_aes_cbc_256/bin; ./ecdh_aes_cbc_256
+	cd tests/sha256/bin; ./sha256
 	cd tests/mqtt/bin; ./tests_mqtt
 
 deps:

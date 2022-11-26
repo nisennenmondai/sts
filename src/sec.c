@@ -8,6 +8,19 @@
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/entropy.h"
 
+void sts_obfuscate(unsigned char *data, size_t size)
+{
+        reverse_bits_order(data, size);
+        xor_bits(data, size);
+}
+
+void sts_clarify(unsigned char *data, size_t size)
+{
+        xor_bits(data, size);
+        reverse_bits_order(data, size);
+}
+
+
 int sts_verify_keylen(const unsigned char *key, size_t size, size_t len)
 {
         size_t i;
@@ -25,6 +38,24 @@ int sts_verify_keylen(const unsigned char *key, size_t size, size_t len)
         if (keylen != len) {
                 return keylen;
         } 
+        return 0;
+}
+
+int sts_verify_hash(unsigned char *digest_a, unsigned char *digest_b)
+{
+        int i;
+        int idx;
+        for (i = 0; i < HASH_SIZE; i++) {
+                if (digest_a[i] == digest_b[i]) {
+                        idx++;
+                        if (idx == HASH_SIZE - 1) {
+                                break;
+                        }
+                        continue;
+                } else {
+                        return -1;
+                }
+        }
         return 0;
 }
 

@@ -16,6 +16,7 @@
 #define ECB_BLOCKSIZE      16
 #define CBC_BLOCKSIZE      16
 #define ID_SIZE            32
+#define HASH_SIZE          32
 #define MPI_STRING_SIZE    128
 #define ECDH_KEYSIZE_BITS  256
 #define ECDH_KEYSIZE_BYTES (ECDH_KEYSIZE_BITS / BYTE)
@@ -175,11 +176,6 @@ int sts_send_nosec(char *str);
 int sts_send_sec(char *str);
 
 /*
- * @brief       retrieve context.
- */
-struct sts_context *sts_get_ctx(void);
-
-/*
  * @brief               extract sts header and data.
  * @param inc           incoming message.
  * @parem msg           sts message with extracted header and data.
@@ -191,5 +187,10 @@ void sts_parse_msg(char *inc, struct sts_message *msg);
  * @parem msg           sts message with extracted header and data.
  */
 void sts_msg_handlers(struct sts_message *msg);
+
+/*
+ * @brief       retrieve context.
+ */
+struct sts_context *sts_get_ctx(void);
 
 #endif /* STS_H */
