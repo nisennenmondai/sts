@@ -31,6 +31,14 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 $(BIN_DIR) $(OBJ_DIR):
 	mkdir -p $@
 
+build-tests:
+	cd tests/; make
+
+run-tests:
+	cd tests/ecdh_aes_ecb_256/bin; ./ecdh_aes_ecb_256
+	cd tests/ecdh_aes_cbc_256/bin; ./ecdh_aes_cbc_256
+	cd tests/mqtt/bin; ./tests_mqtt
+
 deps:
 	git submodule update --init --recursive
 	cd lib/paho-mqtt/; cmake .; make

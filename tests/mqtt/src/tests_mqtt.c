@@ -18,7 +18,7 @@ void mqtt_test(void)
         ctx->no_print_out = 1;
         ctx->pid = getpid();
 
-        sts_load_config("config_nosec");
+        sts_load_config("../config_nosec");
         mqtt_init();
         ret = mqtt_connect();
         if (ret == 0) {

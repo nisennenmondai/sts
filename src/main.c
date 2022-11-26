@@ -1,5 +1,3 @@
-#include <sys/wait.h>
-
 #include "shell.h"
 
 int main(void)
