@@ -8,6 +8,7 @@
 #include "mbedtls/ecdh.h"
 
 /* sts config */
+#define MQTT_VERSION    4
 #define CONF_KEY_MAXLEN 16
 #define CONF_VAL_MAXLEN 128
 
@@ -32,10 +33,8 @@
 /* sts msg types */
 #define STS_INITREQ "INITREQ:"
 #define STS_INITACK "INITACK:"
-#define STS_AUTHREQ "AUTHREQ:"
-#define STS_AUTHACK "AUTHACK:"
-#define STS_RDYREQ  "RDYREQ:"
-#define STS_RDYACK  "RDYACK:"
+#define STS_KEYREQ  "KEYREQ:"
+#define STS_KEYACK  "KEYACK:"
 #define STS_KILL    "KILL:"
 #define STS_ENC     "ENC:"
 
@@ -54,8 +53,6 @@
 #define STS_STEP_1 1
 #define STS_STEP_2 2
 #define STS_STEP_3 3
-#define STS_STEP_4 4
-#define STS_STEP_5 5
 
 /*
  * @brief       sts message struct, an sts msg is defined as 1024 bytes in size.
@@ -69,7 +66,6 @@ struct sts_message {
 
 /*
  * @brief               sts context.
- * @mqtt_version        actual mqtt version used by the client (3|4).
  * @port                mqtt port for connection with broker.
  * @msg_sent            number of message sent to broker.
  * @msg_recv            number of message receved from broker subscription.
@@ -88,8 +84,6 @@ struct sts_message {
  * @clientid            mqtt client id.
  * @username            mqtt username, only useful if broker requires it.
  * @password            mqtt passowrd, only useful if broker requires it.
- * @id_master           auto-generated id during init_sec.
- * @id_slave            auto-generated id during init_sec.
  * @sts_mode            mode in which sts client is running, nosec|master|slave.
  * @aes                 aes block cipher mode of operation, ecb|cbc.
  * @ip                  mqtt broker ip.
@@ -100,7 +94,6 @@ struct sts_message {
  * @host_ecdh_ctx       mbedtls ecdh ctx for crypto key agreement protocole.
  */
 struct sts_context {
-        unsigned int mqtt_version;
         unsigned int port;
         unsigned int msg_sent;
         unsigned int msg_recv;
@@ -119,8 +112,6 @@ struct sts_context {
         char clientid[CONF_VAL_MAXLEN];
         char username[CONF_VAL_MAXLEN];
         char password[CONF_VAL_MAXLEN];
-        char id_master[CONF_VAL_MAXLEN];
-        char id_slave[CONF_VAL_MAXLEN];
         char sts_mode[CONF_VAL_MAXLEN];
         char aes[CONF_VAL_MAXLEN];
         char url[CONF_VAL_MAXLEN];

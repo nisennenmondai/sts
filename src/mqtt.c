@@ -36,7 +36,7 @@ static void _mqtt_on_msg_recv(MessageData *data)
         }
 
         /* if init_sec */
-        if (ctx->encryption == 0 && ctx->status < STS_STEP_5 && (
+        if (ctx->encryption == 0 && ctx->status < STS_STEP_3 && (
                                 strcmp(ctx->sts_mode, STS_SECMASTER) == 0 || 
                                 strcmp(ctx->sts_mode, STS_SECSLAVE) == 0)) {
                 char *msg_inc = NULL;
@@ -142,7 +142,7 @@ int mqtt_connect(void)
 
         /* setting conn params */
         MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
-        data.MQTTVersion = ctx->mqtt_version;
+        data.MQTTVersion = MQTT_VERSION;
         data.clientID.cstring = ctx->clientid;
         /* keepalive not implemented */
         data.keepAliveInterval = 0;

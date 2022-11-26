@@ -115,25 +115,18 @@ int sts_status(char **argv)
         INFO("sts: +==========================================+\n");
         INFO("sts: | MQTT                                     |\n");
         INFO("sts: +==========================================+\n");
-        INFO("sts: | mqtt version:    %u\n", ctx->mqtt_version);
+        INFO("sts: | mqtt version:    %u\n", MQTT_VERSION);
         INFO("sts: | broker_url:      %s\n", ctx->url);
         INFO("sts: | broker_port:     %u\n", ctx->port);
         INFO("sts: | username:        %s\n", ctx->username);
         INFO("sts: | password:        %s\n", ctx->password);
         INFO("sts: | sub_topic:       %s\n", ctx->topic_sub);
         INFO("sts: | pub_topic:       %s\n", ctx->topic_pub);
-        INFO("sts: | qos:             %u\n", 0);
-        INFO("sts: | clean_session:   %u\n", 1);
         INFO("sts: | client_id:       %s\n", ctx->clientid);
         INFO("sts: +==========================================+\n");
         INFO("sts: | STS                                      |\n");
         INFO("sts: +==========================================+\n");
         INFO("sts: | sts_mode:        %s\n", ctx->sts_mode);
-
-        if (ctx->encryption == 1) {
-                INFO("sts: | id_master:       %s\n", ctx->id_master);
-                INFO("sts: | id_slave:        %s\n", ctx->id_slave);
-        }
         INFO("sts: | msg sent:        %u\n", ctx->msg_sent);
         INFO("sts: | msg recv:        %u\n", ctx->msg_recv);
 
@@ -150,8 +143,6 @@ int sts_status(char **argv)
         }
         return STS_PROMPT;
 }
-
-
 
 int sts_test_send_nosec(char **message)
 {

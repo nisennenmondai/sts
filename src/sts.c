@@ -4,7 +4,6 @@
 #include "tools.h"
 
 static struct sts_context ctx = {
-        .mqtt_version   = 0,
         .port           = 0,
         .no_print_out   = 0,
         .no_print_inc   = 0,
@@ -61,23 +60,29 @@ int sts_load_config(const char *config)
         char value[CONF_VAL_MAXLEN] = {0};
 
         while (fscanf(fp, "%s %s %s ", key, cmp, value) != EOF) {
-                if (strcmp(key, "mqtt_version") == 0) {
-                        ctx.mqtt_version = atoi(value);
-                } else if (strcmp(key, "url") == 0) {
+
+                if (strcmp(key, "url") == 0) {
                         strcpy(ctx.url, value);
                 } else if (strcmp(key, "port") == 0) {
                         ctx.port = atoi(value);
+
                 } else if (strcmp(key, "username") == 0) {
                         strcpy(ctx.username, value);
+
                 } else if (strcmp(key, "password") == 0) {
                         strcpy(ctx.password, value);
+
                 } else if (strcmp(key, "subtop") == 0) {
                         strcpy(ctx.topic_sub, value);
+
                 } else if (strcmp(key, "pubtop") == 0) {
                         strcpy(ctx.topic_pub, value);
+
                 } else if (strcmp(key, "clientid") == 0) {
                         strcpy(ctx.clientid, value);
+
                 } else if (strcmp(key, "sts_mode") == 0) {
+
                         /* if nosec mode then aes = null */
                         if (strcmp(value,STS_NOSEC) == 0) {
                                 strcpy(ctx.sts_mode, value);
@@ -88,8 +93,10 @@ int sts_load_config(const char *config)
 
                         } else if (strcmp(value, STS_SECMASTER) == 0) {
                                 strcpy(ctx.sts_mode, value);
+
                         } else if (strcmp(value, STS_SECSLAVE) == 0) {
                                 strcpy(ctx.sts_mode, value);
+
                         } else {
                                 ERROR("sts: wrong value for sts_mode "
                                                 "nosec | master | slave\n");
@@ -99,12 +106,16 @@ int sts_load_config(const char *config)
                         }
 
                 } else if (strcmp(key, "aes") == 0) {
+
                         if (strcmp(value, AES_NULL) == 0) {
                                 strcpy(ctx.aes, value);
+
                         } else if (strcmp(value, AES_ECB) == 0) {
                                 strcpy(ctx.aes, value);
+
                         } else if (strcmp(value, AES_CBC) == 0) {
                                 strcpy(ctx.aes, value);
+
                         } else {
                                 ERROR("sts: wrong value for aes "
                                                 "null | ecb | cbc\n");
@@ -112,11 +123,6 @@ int sts_load_config(const char *config)
                                 config = NULL;
                                 return -1;
                         }
-
-                } else if (strcmp(key, "id_master") == 0) {
-                        strcpy(ctx.id_master, value);
-                } else if (strcmp(key, "id_slave") == 0) {
-                        strcpy(ctx.id_slave, value);
 
                 } else {
                         ERROR("sts: wrong key(s) in config file, please "
@@ -162,6 +168,7 @@ void sts_msg_handlers(struct sts_message *msg)
 
         /* SLAVE SIDE */
         if (strcmp(ctx.sts_mode, STS_SECSLAVE) == 0) {
+
                 /* receive KILL from master */
                 if (strcmp(msg->header, STS_KILL) == 0 && ctx.encryption == 1) {
                         ctx.kill_flag = 1;
@@ -179,34 +186,9 @@ void sts_msg_handlers(struct sts_message *msg)
                         return;
                 }
 
-                /* receive AUTHREQ from master*/
-                if (strcmp(msg->header, STS_AUTHREQ) == 0 && 
+                /* receive KEYREQ from master */
+                if (strcmp(msg->header, STS_KEYREQ) == 0 && 
                                 ctx.slave_flag == STS_STEP_1) {
-                        TRACE("sts: Received AUTHREQ from master\n");
-                        if (strcmp(msg->data, ctx.id_master) == 0) {
-                                INFO("sts: Authentication SUCCESS\n");
-                                ctx.slave_flag = STS_STEP_2;
-                                return;
-
-                        } else {
-                                ERROR("sts: Authentication FAILURE! master "
-                                                "sent wrong ID\n");
-                                return;
-                        }
-                }
-
-                /* receive AUTHACK from master */
-                if (strcmp(msg->header, STS_AUTHACK) == 0 && 
-                                ctx.slave_flag == STS_STEP_2 && 
-                                msg->data[0] == '\0') {
-                        TRACE("sts: Received AUTHACK from master\n");
-                        ctx.slave_flag = STS_STEP_3;
-                        return;
-                }
-
-                /* receive RDYREQ from master */
-                if (strcmp(msg->header, STS_RDYREQ) == 0 && 
-                                ctx.slave_flag == STS_STEP_3) {
                         char master_QX[MPI_STRING_SIZE];
                         char master_QY[MPI_STRING_SIZE];
 
@@ -221,23 +203,24 @@ void sts_msg_handlers(struct sts_message *msg)
                                 return;
                         }
 
-                        TRACE("sts: Received RDYREQ from master\n");
-                        ctx.slave_flag = STS_STEP_4;
+                        TRACE("sts: Received KEYREQ from master\n");
+                        ctx.slave_flag = STS_STEP_2;
                         return;
                 }
 
-                /* receive RDYACK from master */
-                if (strcmp(msg->header, STS_RDYACK) == 0 && 
-                                ctx.slave_flag == STS_STEP_4 && 
+                /* receive KEYACK from master */
+                if (strcmp(msg->header, STS_KEYACK) == 0 && 
+                                ctx.slave_flag == STS_STEP_2 && 
                                 msg->data[0] == '\0') {
-                        TRACE("sts: Received RDYACK from master\n");
-                        ctx.slave_flag = STS_STEP_5;
+                        TRACE("sts: Received KEYACK from master\n");
+                        ctx.slave_flag = STS_STEP_3;
                         return;
                 }
         }
 
         /* MASTER SIDE */
         if (strcmp(ctx.sts_mode, STS_SECMASTER) == 0) {
+
                 /* receive KILL from slave */
                 if (strcmp(msg->header, STS_KILL) == 0 && ctx.encryption == 1) {
                         ctx.kill_flag = 1;
@@ -256,43 +239,18 @@ void sts_msg_handlers(struct sts_message *msg)
                         return;
                 }
 
-                /* receive AUTHACK from slave */
-                if (strcmp(msg->header, STS_AUTHACK) == 0 && 
+                /* receive KEYACK from slave */
+                if (strcmp(msg->header, STS_KEYACK) == 0 && 
                                 ctx.master_flag == STS_STEP_1 && 
                                 msg->data[0] == '\0') {
-                        TRACE("sts: Received AUTHACK from slave\n");
+                        TRACE("sts: Received KEYACK from slave\n");
                         ctx.master_flag = STS_STEP_2;
                         return;
                 }
 
-                /* receive AUTHREQ from slave */
-                if (strcmp(msg->header, STS_AUTHREQ) == 0 && 
+                /* receive KEYREQ from slave */
+                if (strcmp(msg->header, STS_KEYREQ) == 0 && 
                                 ctx.master_flag == STS_STEP_2) {
-                        TRACE("sts: Received AUTHREQ from slave\n");
-                        if (strcmp(msg->data, ctx.id_slave) == 0) {
-                                INFO("sts: Authentication SUCCESS\n");
-                                ctx.master_flag = STS_STEP_3;
-                                return;
-
-                        } else {
-                                ERROR("sts: Authentication FAILURE! slave "
-                                                "sent wrong ID\n");
-                                return;
-                        }
-                }
-
-                /* receive RDYACK from slave */
-                if (strcmp(msg->header, STS_RDYACK) == 0 && 
-                                ctx.master_flag == STS_STEP_3 && 
-                                msg->data[0] == '\0') {
-                        TRACE("sts: Received RDYACK from slave\n");
-                        ctx.master_flag = STS_STEP_4;
-                        return;
-                }
-
-                /* receive RDYREQ from slave */
-                if (strcmp(msg->header, STS_RDYREQ) == 0 && 
-                                ctx.master_flag == STS_STEP_4) {
                         char slave_QX[MPI_STRING_SIZE];
                         char slave_QY[MPI_STRING_SIZE];
 
@@ -307,8 +265,8 @@ void sts_msg_handlers(struct sts_message *msg)
                                 return;
                         }
 
-                        TRACE("sts: Received RDYREQ from slave\n");
-                        ctx.master_flag = STS_STEP_5;
+                        TRACE("sts: Received KEYREQ from slave\n");
+                        ctx.master_flag = STS_STEP_3;
                         return;
                 }
         }
@@ -344,6 +302,9 @@ int sts_send_sec(char *str)
         unsigned char msg[STS_MSG_MAXLEN];
         unsigned char enc[STS_MSG_MAXLEN];
 
+        memset(msg, 0, sizeof(msg));
+        memset(enc, 0, sizeof(enc));
+
         if (ctx.status == STS_STOPPED) {
                 ERROR("sts: session not started\n");
                 return -1;
@@ -353,9 +314,6 @@ int sts_send_sec(char *str)
                 ERROR("sts: encryption OFF, use 'send_nosec()' instead\n");
                 return -1;
         }
-
-        memset(msg, 0, sizeof(msg));
-        memset(enc, 0, sizeof(enc));
 
         if (ctx.kill_flag == 1) {
                 ctx.no_print_out = 1;
@@ -470,41 +428,8 @@ int sts_init_sec(void)
                 while (ctx.master_flag == STS_STEP_0) {};
 
 
-                /* send AUTHREQ to slave */
-                TRACE("sts: Sending AUTHREQ to slave\n");
-                memset(msg_out, 0, sizeof(msg_out));
-                concatenate(msg_out, STS_AUTHREQ);
-                concatenate(msg_out, ctx.id_master);
-
-                ctx.no_print_out = 1;
-                ret = mqtt_publish(msg_out);
-                if (ret < 0) {
-                        ERROR("sts: mqtt_publish()\n");
-                        return -1;
-                }
-
-                /* wait AUTHACK from slave */
-                TRACE("sts: Waiting AUTHACK from slave\n");
-                while (ctx.master_flag == STS_STEP_1) {};
-
-                /* wait AUTHREQ from slave */
-                TRACE("sts: Waiting AUTHREQ from slave\n");
-                while (ctx.master_flag == STS_STEP_2) {};
-
-                /* send AUTHACK to slave */
-                TRACE("sts: Sending AUTHACK to slave...\n");
-                memset(msg_out, 0, sizeof(msg_out));
-                concatenate(msg_out, STS_AUTHACK);
-
-                ctx.no_print_out = 1;
-                ret = mqtt_publish(msg_out);
-                if (ret < 0) {
-                        ERROR("sts: mqtt_publish()\n");
-                        return -1;
-                }
-
-                /* send RDYREQ to slave */
-                TRACE("sts: Sending RDYREQ to slave...\n");
+                /* send KEYREQ to slave */
+                TRACE("sts: Sending KEYREQ to slave...\n");
                 memset(msg_out, 0, sizeof(msg_out));
                 ret = mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.X, 16, 
                                 master_QX, MPI_STRING_SIZE, &olen);
@@ -518,7 +443,7 @@ int sts_init_sec(void)
                         ERROR("sts: mbedtls_mpi_write_string()\n");
                         return -1;
                 }
-                concatenate(msg_out, STS_RDYREQ);
+                concatenate(msg_out, STS_KEYREQ);
                 concatenate(msg_out, "X");
                 concatenate(msg_out, master_QX);
                 concatenate(msg_out, "Y");
@@ -531,18 +456,18 @@ int sts_init_sec(void)
                         return -1;
                 }
 
-                /* wait RDYACK from slave */
-                TRACE("sts: Waiting RDYACK from slave\n");
-                while (ctx.master_flag == STS_STEP_3) {};
+                /* wait KEYACK from slave */
+                TRACE("sts: Waiting KEYACK from slave\n");
+                while (ctx.master_flag == STS_STEP_1) {};
 
-                /* wait RDYREQ from slave */
-                TRACE("sts: Waiting RDYREQ from slave\n");
-                while (ctx.master_flag == STS_STEP_4) {};
+                /* wait KEYREQ from slave */
+                TRACE("sts: Waiting KEYREQ from slave\n");
+                while (ctx.master_flag == STS_STEP_2) {};
 
-                /* send RDYACK to slave */
-                TRACE("sts: Sending RDYACK to slave\n");
+                /* send KEYACK to slave */
+                TRACE("sts: Sending KEYACK to slave\n");
                 memset(msg_out, 0, sizeof(msg_out));
-                concatenate(msg_out, STS_RDYACK);
+                concatenate(msg_out, STS_KEYACK);
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
@@ -574,14 +499,14 @@ int sts_init_sec(void)
                         return -1;
                 }
 
-                /* wait AUTHREQ from master */
-                TRACE("sts: Waiting AUTHREQ from master\n");
+                /* wait KEYREQ from master */
+                TRACE("sts: Waiting KEYREQ from master\n");
                 while (ctx.slave_flag == STS_STEP_1) {};
 
-                /* send AUTHACK to master */
-                TRACE("sts: Sending AUTHACK to master\n");
+                /* send KEYACK to master */
+                TRACE("sts: Sending KEYACK to master\n");
                 memset(msg_out, 0, sizeof(msg_out));
-                concatenate(msg_out, STS_AUTHACK);
+                concatenate(msg_out, STS_KEYACK);
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
@@ -590,41 +515,8 @@ int sts_init_sec(void)
                         return -1;
                 }
 
-                /* send AUTHREQ to master */
-                TRACE("sts: Sending AUTHREQ to master\n");
-                memset(msg_out, 0, sizeof(msg_out));
-                concatenate(msg_out, STS_AUTHREQ);
-                concatenate(msg_out, ctx.id_slave);
-
-                ctx.no_print_out = 1;
-                ret = mqtt_publish(msg_out);
-                if (ret < 0) {
-                        ERROR("sts: mqtt_publish()\n");
-                        return -1;
-                }
-
-                /* wait AUTHACK from master */
-                TRACE("sts: Waiting AUTHACK from master\n");
-                while (ctx.slave_flag == STS_STEP_2) {};
-
-                /* wait RDYREQ from master */
-                TRACE("sts: Waiting RDYREQ from master\n");
-                while (ctx.slave_flag == STS_STEP_3) {};
-
-                /* send RDYACK to master */
-                TRACE("sts: Sending RDYACK to master\n");
-                memset(msg_out, 0, sizeof(msg_out));
-                concatenate(msg_out, STS_RDYACK);
-
-                ctx.no_print_out = 1;
-                ret = mqtt_publish(msg_out);
-                if (ret < 0) {
-                        ERROR("sts: mqtt_publish()\n");
-                        return -1;
-                }
-
-                /* send RDYREQ */
-                TRACE("sts: Sending RDYREQ to master\n");
+                /* send KEYREQ */
+                TRACE("sts: Sending KEYREQ to master\n");
                 ret = mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.X, 16, 
                                 slave_QX, MPI_STRING_SIZE, &olen);
                 if (ret != 0) {
@@ -638,7 +530,7 @@ int sts_init_sec(void)
                         return -1;
                 }
                 memset(msg_out, 0, sizeof(msg_out));
-                concatenate(msg_out, STS_RDYREQ);
+                concatenate(msg_out, STS_KEYREQ);
                 concatenate(msg_out, "X");
                 concatenate(msg_out, slave_QX);
                 concatenate(msg_out, "Y");
@@ -651,9 +543,9 @@ int sts_init_sec(void)
                         return -1;
                 }
 
-                /* wait RDYACK from master */
-                TRACE("sts: Waiting RDYACK from master\n");
-                while (ctx.slave_flag == STS_STEP_4) {};
+                /* wait KEYACK from master */
+                TRACE("sts: Waiting KEYACK from master\n");
+                while (ctx.slave_flag == STS_STEP_2) {};
 
                 /* wait for master to finish */
                 sleep(1);
@@ -673,7 +565,6 @@ void sts_free_sec(void)
 
 void sts_reset_ctx(void)
 {
-        ctx.mqtt_version  = 0;
         ctx.port          = 0;
         ctx.no_print_out  = 0;
         ctx.no_print_inc  = 0;
@@ -691,8 +582,6 @@ void sts_reset_ctx(void)
         memset(ctx.clientid,    0, sizeof(ctx.clientid));
         memset(ctx.username,    0, sizeof(ctx.username));
         memset(ctx.password,    0, sizeof(ctx.password));
-        memset(ctx.id_master,   0, sizeof(ctx.id_master));
-        memset(ctx.id_slave,    0, sizeof(ctx.id_slave));
         memset(ctx.sts_mode,    0, sizeof(ctx.sts_mode));
         memset(ctx.aes,         0, sizeof(ctx.aes));
         memset(ctx.url,         0, sizeof(ctx.url));

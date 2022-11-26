@@ -1,10 +1,9 @@
-mqtt_version  = 4
 url  = broker.hivemq.com 
 port = 1883
 username = nosec
 password = nosec
-subtop   = nisennenmondai       
-pubtop   = nisennenmondai
+subtop   = test_sub
+pubtop   = test_pub
 clientid = test_nosec
 sts_mode = nosec
 aes      = null
