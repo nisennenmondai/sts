@@ -4,7 +4,6 @@
 ## **Features**
 
 - **Lightweight MQTT client** for Embedded Linux
-- **Authentication**
 - **End-to-End Payload Encryption** with symmetric cipher
 - **Encapsulation** in a shell for easy of use and possible modules development
 
@@ -22,7 +21,7 @@ https://www.hivemq.com/blog/mqtt-security-fundamentals-payload-encryption/
 - Need for secure E2EE of application data
 - Need for an additional layer of security working in addition with TLS
 
-![](doc/img/archi.png?raw=true "stack")
+    ![](doc/img/archi.png?raw=true "stack")
 
 ## **Dependencies**
 
@@ -38,12 +37,21 @@ STS uses a number of open source projects to work properly:
 
 ```sh
 make deps
-make
 sudo make install
+make
 ```
 - **make deps** will download and build *paho-mqtt* and *mbedtls*
-- **make** will build *sts*
 - **sudo make install** will install *paho-mqtt* and *mbedtls* libraries
+- **make** will build *sts*
+
+## **Tests**
+
+```sh
+make build-tests
+make run-tests
+```
+- **make build-tests** will build tests
+- **make run-tests** will run tests
 
 ## **HOWTO**
 STS can be used in 2 modes: with or without encryption: 
@@ -61,17 +69,12 @@ established
 
 ### Configuration files
 STS needs to use configuration files, those contain parameters for MQTT and STS, 
-the ones provided work just fine, they use a public broker: 
+the ones provided work just fine, it uses a public broker: 
 
 **broker.hivemq.com**
 
-If can't connect try this one:
-
-**broker.emqx.io**
-
 | KEY  | VALUE (128 char max)| 
 | ------------- | ------------- |
-| **mqtt_version** | 3 or 4  |
 | **url**  | broker url  |
 | **port**  | usually 1883 for TCP  |
 | **username**  | if broker requires login  |
@@ -81,8 +84,6 @@ If can't connect try this one:
 | **clientid**  | mqtt id  |
 | **sts_mode**  | nosec, master, slave  |
 | **aes**  | null, ecb, cbc  |
-| **id_master**  | defined by user  |
-| **id_slave**  | defined by user  |
 
 ### STS no encryption
 ```sh
@@ -91,7 +92,7 @@ cd bin/
 ```
 Start a session and send messages
 ```sh
-start ../configs/config_nosec
+start ../configs/nosec
 send my message
 ```
 Stop a session
@@ -104,10 +105,10 @@ stop
 Protocol is designed as so you need to start a session with *slave* first then 
 with *master*.
 ```sh
-start ../configs/config_secslave
+start ../configs/secslave
 ```
 ```sh
-start ../configs/config_secmaster
+start ../configs/secmaster
 ```
 Once encryption is established you can send encrypted message with:
 ```sh
@@ -127,33 +128,20 @@ message is the same as MQTT, in this implementation it is set to 1024 bytes:
 | ------------- | ------------- |
 | **INITREQ** | Initialization request |
 | **INITACK**  | Initialization acknowledgement |
-| **AUTHREQ**  | Authentication request |
-| **AUTHACK**  | Authentication acknowledgement  |
-| **RDYREQ**  | Ready request, ask if remote client is ready for encrypted communication |
-| **RDYACK**  | Ready acknowledgement  |
+| **KEYREQ**  | Key request |
+| **KEYACK**  | Key acknowledgement  |
 | **ENC**  | Encrypted message  |
 | **KILL**  | Message that tells remote client to terminate its session  |
 
 ### Connection Protocol
 ![Alt text](doc/img/connection_protocol.png?raw=true "conn")
 
-### Authentication
-*master* initiates authentication by sending **INITREQ** to *slave* with a
-"request" message, *slave* acknowledges sending **INITACK**, now *master* 
-proceeds to send **AUTHREQ** attaching his ID, upon receipt *slave* will verify 
-if ID matches and authenticates *master* sending **AUTHACK**, if ID does not 
-matches, it will wait for timer to end and return an error. It is now *slave*'s 
-turn to send **AUTHREQ**, once *master* verifies if ID matches it will 
-acknowledge sending **AUTHACK**. From now on both clients are authenticated and 
-can proceed to cryptographic keys exchange.
-
 ### Key Exchange and Shared Secret
-Once authentication phase is done *master* sends **RDYREQ** with its public key, 
-upon receipt *slave* computes the shared secret and acknowledges with 
-**RDYACK**. Now it is *slave*'s turn to send his public key with **RDYREQ**,
-upon receipt *master* computes the shared secret and acknowledges with 
-**RDYACK**. At this point encrypted communication is available and every message 
-will be sent with an **ENC** header.
+*master* sends **KEYREQ** with its public key, upon receipt *slave* computes the 
+shared secret and acknowledges with **KEYACK**. Now it is *slave*'s turn to send 
+its public key with **KEYREQ**, upon receipt *master* computes the shared secret 
+and acknowledges with **KEYACK**. At this point encrypted communication is 
+available and every message will be sent with an **ENC** header.
 
 ### Deconnection
 If any of the two clients ends its session a **KILL** message is sent to 
@@ -161,5 +149,5 @@ the remote client to notify it to terminate its session too.
 
 ### Algorithms
 Key exchange agreement protocol used is **ECDH**, elliptic curve is 
-**SECP256K1,** finally encryption used is **AES**, 2 block cipher modes 
+**SECP256K1,** finally encryption used is **AES-256**, 2 block cipher modes 
 operation are available, **ECB** and **CBC**.
