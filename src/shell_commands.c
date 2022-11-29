@@ -9,6 +9,7 @@ int sts_start_session(char **argv)
         (void)argv;
         int ret;
         struct sts_context *ctx;
+
         ctx = sts_get_ctx();
 
         if (ctx->status == STS_STARTED) {
@@ -26,12 +27,14 @@ int sts_start_session(char **argv)
         ctx->pid = getpid();
 
         ret = sts_init(argv[1]);
+
         if (ret < 0) {
                 ERROR("sts: could not initialize session\n");
                 return STS_PROMPT;
         }
 
         ret = mqtt_connect(); 
+
         if (ret < 0) {
                 ERROR("sts: could not connect to broker\n");
                 mqtt_disconnect();
@@ -40,6 +43,7 @@ int sts_start_session(char **argv)
         }
 
         ret = mqtt_subscribe();
+
         if (ret < 0) {
                 ERROR("sts: could not subscribe to broker, disconnecting...\n");
                 mqtt_disconnect();
@@ -49,7 +53,9 @@ int sts_start_session(char **argv)
 
         if (strcmp(ctx->sts_mode, STS_SECMASTER) == 0 || 
                         strcmp(ctx->sts_mode, STS_SECSLAVE) == 0) {
+
                 ret = sts_init_sec();
+
                 if (ret < 0) {
                         ERROR("sts: while initializing security\n");
                         mqtt_disconnect();
@@ -80,9 +86,9 @@ int sts_stop_session(char **argv)
                 INFO("sts: Sending KILL to remote client\n");
                 ctx->kill_flag = 1;
                 ret = sts_send_sec(STS_KILL);
-                if (ret < 0) {
+
+                if (ret < 0)
                         ERROR("sts: could not send KILL to remote client\n");
-                }
         }
 
         /* kill thread and give it time to close up */
@@ -90,6 +96,7 @@ int sts_stop_session(char **argv)
         sleep(2);
 
         ret = mqtt_unsubscribe();
+
         if (ret < 0) {
                 ERROR("sts: could not unsubscribe from topic '%s'\n",
                                 ctx->topic_sub);

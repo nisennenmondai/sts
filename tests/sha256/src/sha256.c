@@ -9,11 +9,12 @@ void sha256_test(void)
         TESTS("+================================================+\n");
         TESTS("|                    SHA256                      |\n");
         TESTS("+================================================+\n");
+
+        int ret;
+        int count;
         size_t size;
         size_t olen;
         size_t cbc_len;
-        int ret;
-        int count = 0;
 
         char *msg = "CORE-TEX_LABS: Deadman, PafLeChien, max1point";
         unsigned char host_derived_key[ECDH_KEYSIZE_BYTES];
@@ -21,17 +22,13 @@ void sha256_test(void)
         unsigned char message[STS_MSG_MAXLEN];
         unsigned char enc_msg[STS_MSG_MAXLEN];
         unsigned char dec_msg[STS_MSG_MAXLEN];
+        unsigned char digest_enc[HASH_SIZE];
+        unsigned char digest_dec[HASH_SIZE];
 
         mbedtls_ecdh_context host_ecdh_ctx;
         mbedtls_ecdh_context remote_ecdh_ctx;
         mbedtls_aes_context host_aes_ctx;
         mbedtls_aes_context remote_aes_ctx;
-
-        mbedtls_ecdh_init(&host_ecdh_ctx);
-        mbedtls_ecdh_init(&remote_ecdh_ctx);
-
-        unsigned char digest_enc[HASH_SIZE];
-        unsigned char digest_dec[HASH_SIZE];
 
         memset(message, 0, STS_MSG_MAXLEN);
         memset(enc_msg, 0, STS_MSG_MAXLEN);
@@ -39,13 +36,22 @@ void sha256_test(void)
         memset(digest_dec, 0, sizeof(digest_dec));
         memset(digest_enc, 0, sizeof(digest_enc));
 
+        mbedtls_ecdh_init(&host_ecdh_ctx);
+        mbedtls_ecdh_init(&remote_ecdh_ctx);
+        mbedtls_aes_init(&host_aes_ctx);
+        mbedtls_aes_init(&remote_aes_ctx);
+
+        count = 0;
+
         /* ecdh shared secret */
         ret = mbedtls_ecdh_setup(&host_ecdh_ctx, MBEDTLS_ECP_DP_CURVE25519);
+
         if (ret != 0) {
                 TESTS("mbedtls_ecdh_setup()\n");
                 count--;
         }
         ret = mbedtls_ecdh_setup(&remote_ecdh_ctx, MBEDTLS_ECP_DP_CURVE25519);
+
         if (ret != 0) {
                 TESTS("mbedtls_ecdh_setup()\n");
                 count--;
@@ -66,12 +72,14 @@ void sha256_test(void)
         }
 
         ret = mbedtls_ecp_copy(&host_ecdh_ctx.Qp, &remote_ecdh_ctx.Q);
+
         if (ret != 0) {
                 TESTS("mbedtls_ecp_copy()\n");
                 count--;
         }
 
         ret = mbedtls_ecp_copy(&remote_ecdh_ctx.Qp, &host_ecdh_ctx.Q);
+
         if (ret != 0) {
                 TESTS("mbedtls_ecp_copy()\n");
                 count--;
@@ -90,9 +98,6 @@ void sha256_test(void)
                 TESTS("mbedtls_ecdh_calc_secret()\n");
                 count--;
         }
-
-        mbedtls_aes_init(&host_aes_ctx);
-        mbedtls_aes_init(&remote_aes_ctx);
 
         size = strlen(msg);
         memcpy(message, msg, size);
@@ -134,9 +139,11 @@ void sha256_test(void)
 
         /* test 1.0 */
         ret = sts_verify_hash(digest_enc, digest_dec);
+
         if (ret == 0) {
                 TESTS("test 1.0: hash comparison OK!\n");
                 count++;
+
         } else {
                 TESTS("test 1.0: hash comparison FAILED!\n");
                 count--;
@@ -149,11 +156,11 @@ void sha256_test(void)
         mbedtls_ecdh_free(&remote_ecdh_ctx);
         printf("\n");
 
-        if (count == NUMBER_TESTS) {
+        if (count == NUMBER_TESTS)
                 TESTS("TESTS PASSED: %d/%d\n", count, NUMBER_TESTS);
-        } else {
+
+        else 
                 TESTS("TESTS FAILED: %d/%d\n", count, NUMBER_TESTS);
-        }
 }
 
 int main(void)

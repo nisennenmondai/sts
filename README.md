@@ -143,7 +143,7 @@ its public key with **KEYREQ**, upon receipt *master* computes the shared secret
 and acknowledges with **KEYACK**. At this point encrypted communication is 
 available and every message will be sent with an **ENC** header.
 
-### Deconnection
+### Disconnection
 If any of the two clients ends its session a **KILL** message is sent to 
 the remote client to notify it to terminate its session too.
 
@@ -151,3 +151,11 @@ the remote client to notify it to terminate its session too.
 Key exchange agreement protocol used is **ECDH**, elliptic curve is 
 **SECP256K1,** finally encryption used is **AES-256**, 2 block cipher modes 
 operation are available, **ECB** and **CBC**.
+
+### TODO
+- binary to hex function for better display of msg
+- implement sequence number on msg
+- maybe msg integrity with sha256?
+- refactoring
+- refactoring
+- refactoring

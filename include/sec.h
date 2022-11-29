@@ -83,13 +83,21 @@ int sts_decrypt_aes_cbc(mbedtls_aes_context *ctx, unsigned char *iv,
 int sts_drbg(void *rng_state, unsigned char *output, size_t len);
 
 /*
+ * @brief               compute derived_key
+ * @param X             X remote public key
+ * @param Y             Y remote public key
+ * @return              -1 if fails
+ */
+int sts_compute_shared_secret(char *X, char *Y, struct sts_context *ctx);
+
+/*
  * @brief               verify the length of derived_ley.
  * @param buf           derived key.
  * @param size          size of derived_key.
  * @param len           reference length we want to verify (256).
  * @return              != 0 if length of derived_ley is not equal to len.
  */
-int sts_verify_keylen(const unsigned char *key, size_t size, size_t len);
+int sts_verify_keysize(const unsigned char *key, size_t size, size_t len);
 
 /*
  * @brief               verify if hash is equal
@@ -98,13 +106,5 @@ int sts_verify_keylen(const unsigned char *key, size_t size, size_t len);
  * @return              != 0 if hash is not equal 
  */
 int sts_verify_hash(unsigned char *digest_a, unsigned char *digest_b);
-
-/*
- * @brief               compute derived_key
- * @param X             X remote public key
- * @param Y             Y remote public key
- * @return              -1 if fails
- */
-int sts_compute_shared_secret(char *X, char *Y, struct sts_context *ctx);
 
 #endif /* SEC_H */

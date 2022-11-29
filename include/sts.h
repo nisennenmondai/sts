@@ -16,7 +16,6 @@
 #define BYTE               8
 #define ECB_BLOCKSIZE      16
 #define CBC_BLOCKSIZE      16
-#define ID_SIZE            32
 #define HASH_SIZE          32
 #define MPI_STRING_SIZE    128
 #define ECDH_KEYSIZE_BITS  256
@@ -48,7 +47,7 @@
 #define STS_SECSLAVE  "slave"
 #define STS_SECMASTER "master"
 
-/* sts protocole states */
+/* sts protocol states */
 #define STS_STEP_0 0
 #define STS_STEP_1 1
 #define STS_STEP_2 2

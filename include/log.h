@@ -53,40 +53,43 @@
 #define FATAL(...) print(FMT_FATAL __VA_ARGS__) 
 #define TESTS(...) print(FMT_TESTS __VA_ARGS__) 
 
-#define BUFFSIZE 25
 #define MSSIZE   7
+#define BUFFSIZE 25
+#define MILLISEC 1000
 
 static void print(const char *message, ...)
 {
         int c;
         int d;
-        char buffer[BUFFSIZE];
-        char ms[MSSIZE];
         unsigned int millisec;
         va_list args;
         struct timeval tv;
         struct tm* tm_info;
+        char ms[MSSIZE];
+        char buffer[BUFFSIZE];
 
         va_start(args, message);    
 
         gettimeofday(&tv, NULL);
 
         /* round to nearest millisec */
-        millisec = lrint(tv.tv_usec/1000.0);
+        millisec = lrint(tv.tv_usec / MILLISEC);
+
         /* allow for rounding up to nearest second */
-        if (millisec>=1000) { 
-                millisec -=1000;
+        if (millisec >= MILLISEC) { 
+                millisec -= MILLISEC;
                 tv.tv_sec++;
         }
+
         tm_info = localtime(&tv.tv_sec);
         sprintf(ms, "%03d", millisec);
-        strftime(buffer, 25, "%Y-%m-%d %H:%M:%S.", tm_info);
+        strftime(buffer, BUFFSIZE, "%Y-%m-%d %H:%M:%S.", tm_info);
 
         c = 0;
 
-        while (buffer[c] != '\0') {
+        while (buffer[c] != '\0')
                 c++;
-        }
+
         d = 0;
 
         while (ms[d] != '\0') {
@@ -100,4 +103,5 @@ static void print(const char *message, ...)
         vprintf(message, args);
         va_end(args);
 }
+
 #endif /* LOG_H */

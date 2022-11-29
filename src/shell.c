@@ -45,18 +45,19 @@ void sts_sig_handler(int signum)
 
         if (signum == SIGINT) {
                 INFO("sts: SIGINT Ctrl-C\n");
-                if (ctx->status == STS_STARTED) {
+
+                if (ctx->status == STS_STARTED)
                         sts_stop_session(NULL);
-                }
+
                 INFO("sts: exiting sts...\n");
                 exit(EXIT_SUCCESS);
         }
 
         if (signum == SIGUSR1) {
                 INFO("sts: closing session...\n");
-                if (ctx->status == STS_STARTED) {
+
+                if (ctx->status == STS_STARTED)
                         sts_stop_session(NULL);
-                }
         }
 
         if (signum == SIGALRM) {
@@ -85,7 +86,6 @@ static char *sts_read_line(void)
         int buffsize = STS_RL_BUFFSIZE;
         char *buffer = (char*)malloc(buffsize * sizeof(char));
 
-        /* check if buffer has been allocated */
         if (!buffer) {
                 fprintf(stderr, "sts: allocation error\n");
                 exit(EXIT_FAILURE);
@@ -103,9 +103,10 @@ static char *sts_read_line(void)
                 if (c == '\n') {
                         buffer[position] = '\0';
                         return buffer;
-                } else {
+
+                } else 
                         buffer[position] = c;
-                }
+
                 position++;
 
                 /* if we have exceeded the buffer, reallocate */
@@ -113,9 +114,8 @@ static char *sts_read_line(void)
                         buffsize += STS_RL_BUFFSIZE;
                         buffer = realloc(buffer, buffsize);
 
-                        if (!buffer) {
+                        if (!buffer)
                                 fprintf(stderr, "sts: allocation error\n");
-                        }
                 }
         }
 }
@@ -171,13 +171,15 @@ static int sts_launch(char **argv)
         if (pid == 0) {
                 /* child process, execute program by providing filename, vector 
                  * argv */
-                if (execvp(argv[0], argv) == -1) {
+                if (execvp(argv[0], argv) == -1)
                         perror("sts");
-                }
+
                 exit(EXIT_FAILURE);
+
         } else if (pid < 0) {
                 /* forking error */
                 perror("sts");
+
         } else {
                 /* parent process */
                 do {
@@ -196,19 +198,16 @@ static int sts_execute(char **argv)
 {
         int i;
 
-        if (argv[0] == NULL) {
+        if (argv[0] == NULL)
                 /* An empty command was entered. */
                 return 1;
-        }
 
         /* check if command equals a builtin function and execute it, if not 
          * then launch a process */
         for (i = 0; i < sts_num_builtins(); i++) {
-                if (strcmp(argv[0], builtin_cmd[i]) == 0) {
+                if (strcmp(argv[0], builtin_cmd[i]) == 0) 
                         return (*builtin_func[i])(argv);
-                }
         }
-
         return sts_launch(argv);
 }
 

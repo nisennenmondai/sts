@@ -39,11 +39,11 @@ int sts_start_session(char **argv);
 int sts_stop_session(char **argv);
 
 /*
- * @brief               shell sig handler
- * @param signum        linux signal type
- * @return              null
+ * @brief               print sts status in shell.
+ * @param argv          null.
+ * @return              STS_PROMPT.
  */
-void sts_sig_handler(int signum);
+int sts_status(char **argv);
 
 /*
  * @brief               shell welcome message
@@ -60,11 +60,11 @@ void sts_welcome(void);
 void sts_loop(void);
 
 /*
- * @brief               print sts status in shell.
- * @param argv          null.
- * @return              STS_PROMPT.
+ * @brief               shell sig handler
+ * @param signum        linux signal type
+ * @return              null
  */
-int sts_status(char **argv);
+void sts_sig_handler(int signum);
 
 /*
  * @brief               test to send a message with no encryption.

@@ -13,15 +13,18 @@ static void _mqtt_on_msg_recv(MessageData *data)
 {
         struct sts_message msg;
         struct sts_context *ctx;
+
         memset(msg.header, 0, sizeof(msg.header));
         memset(msg.data, 0, sizeof(msg.data));
+
         ctx = sts_get_ctx();
 
         /* if nosec mode */
         if (strcmp(ctx->sts_mode, STS_NOSEC) == 0) {
                 char *msg_inc = NULL;
-                msg_inc = calloc((size_t)data->message->payloadlen + 1, 
-                                sizeof(char));
+
+                msg_inc = calloc((size_t)data->message->payloadlen + 
+                                1, sizeof(char));
                 memcpy(msg_inc, data->message->payload, 
                                 data->message->payloadlen);
                 sts_parse_msg(msg_inc, &msg);
@@ -30,6 +33,7 @@ static void _mqtt_on_msg_recv(MessageData *data)
                 if (ctx->no_print_inc == 0) {
                         INFO("[MQTT_INC]: %s\n", msg.data);
                 }
+
                 ctx->no_print_inc = 0;
                 ctx->msg_recv++;
                 free(msg_inc);
@@ -94,6 +98,7 @@ static void _mqtt_on_msg_recv(MessageData *data)
                 if (ctx->no_print_inc == 0) {
                         INFO("[MQTT_INC]: %s\n", msg.data);
                 }
+
                 ctx->no_print_inc = 0;
                 ctx->msg_recv++;
                 free(enc);
@@ -108,6 +113,7 @@ static void *_mqtt_yield(void *argv)
         ctx = sts_get_ctx();
 
         while (1) {
+
                 if (ctx->thrd_msg_type == STS_KILL_THREAD || 
                                 ctx->client.isconnected == 0) {
                         INFO("sts: killing mqttyield thread...\n");
@@ -115,6 +121,7 @@ static void *_mqtt_yield(void *argv)
                         ctx->status = STS_STOPPED;
                         return NULL;
                 }
+
                 if ((ret = MQTTYield(&ctx->client, 1000)) != 0) {
                         ERROR("sts: error while MQTTYield()(%d)\n", ret);
                         ctx->thrd_msg_type = STS_KILL_THREAD;
@@ -126,6 +133,7 @@ static void *_mqtt_yield(void *argv)
 void mqtt_init(void)
 {
         struct sts_context *ctx;
+
         ctx = sts_get_ctx();
 
         NetworkInit(&ctx->network);
@@ -138,14 +146,17 @@ int mqtt_connect(void)
 {
         int ret;
         struct sts_context *ctx;
+
         ctx = sts_get_ctx();
 
         /* setting conn params */
         MQTTPacket_connectData data = MQTTPacket_connectData_initializer;
         data.MQTTVersion = MQTT_VERSION;
         data.clientID.cstring = ctx->clientid;
+
         /* keepalive not implemented */
         data.keepAliveInterval = 0;
+
         /* no persistent session */
         data.cleansession = 1;
         data.username.cstring = ctx->username;
@@ -159,6 +170,7 @@ int mqtt_connect(void)
         }
 
         ret = MQTTConnect(&ctx->client, &data);
+
         if (ret < 0) {
                 ERROR("sts: could not connect to broker\n");
                 return -1;
@@ -171,9 +183,11 @@ int mqtt_disconnect(void)
 {
         int ret;
         struct sts_context *ctx;
+
         ctx = sts_get_ctx();
 
         ret = MQTTDisconnect(&ctx->client);
+
         if (ret < 0) {
                 ERROR("sts: couldn't disconnect client, "
                                 "forcing network disconnection\n");
@@ -190,6 +204,7 @@ int mqtt_subscribe(void)
 {
         int ret;
         struct sts_context *ctx;
+
         ctx = sts_get_ctx();
 
         ret = MQTTSubscribe(&ctx->client, ctx->topic_sub, 0, 
@@ -197,6 +212,7 @@ int mqtt_subscribe(void)
         if (ret < 0) {
                 return -1;
         }
+
         /* start mqttyield thread to receive msg */
         _mqttyield_thrd_pid = pthread_create(&_mqttyield_thrd_pid, NULL, 
                         _mqtt_yield, NULL);
@@ -208,6 +224,7 @@ int mqtt_unsubscribe(void)
 {
         int ret;
         struct sts_context *ctx;
+
         ctx = sts_get_ctx();
 
         ret = MQTTUnsubscribe(&ctx->client, ctx->topic_pub);
@@ -222,20 +239,23 @@ int mqtt_publish(char *string)
 {
         int ret;
         struct sts_context *ctx;
-        ctx = sts_get_ctx();
         MQTTMessage msg;
+
+        ctx = sts_get_ctx();
 
         if (strlen(string) > STS_MSG_MAXLEN) {
                 ERROR("sts: publish failed, msg > %d\n", STS_MSG_MAXLEN);
                 return -1;
         }
-        /* TODO if qos > 0, triggers seg fault */
+
+        /* if qos > 0, triggers seg fault */
         msg.qos = 0;
         msg.payload = (void*)string;
         msg.payloadlen = strlen(string);
         msg.retained = 0;
 
         ret = MQTTPublish(&ctx->client, ctx->topic_pub, &msg);
+
         if (ret < 0) {
                 mqtt_disconnect();
                 return -1;
@@ -254,8 +274,9 @@ int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len)
 {
         int ret;
         struct sts_context *ctx;
-        ctx = sts_get_ctx();
         MQTTMessage msg;
+
+        ctx = sts_get_ctx();
 
         if (ecb_len > STS_MSG_MAXLEN) {
                 ERROR("sts: mqtt_publish_aes_ecb, msg > %d\n", STS_MSG_MAXLEN);
@@ -264,6 +285,7 @@ int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len)
 
         msg.qos = 0;
         msg.payload = (void*)enc;
+
         /* 
          * we are not sending the size of the actual encrypted data but the size
          * of the original message aligned with ecb_blocksize (16) so if msg
@@ -274,6 +296,7 @@ int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len)
         msg.retained = 0;
 
         ret = MQTTPublish(&ctx->client, ctx->topic_pub, &msg);
+
         if (ret < 0) {
                 mqtt_disconnect();
                 return -1;
@@ -293,8 +316,9 @@ int mqtt_publish_aes_cbc(unsigned char *enc, size_t cbc_len)
 {
         int ret;
         struct sts_context *ctx;
-        ctx = sts_get_ctx();
         MQTTMessage msg;
+
+        ctx = sts_get_ctx();
 
         if (cbc_len > STS_MSG_MAXLEN) {
                 ERROR("sts: mqtt_publish_aes_cbc, msg > %d\n", STS_MSG_MAXLEN);
@@ -303,6 +327,7 @@ int mqtt_publish_aes_cbc(unsigned char *enc, size_t cbc_len)
 
         msg.qos = 0;
         msg.payload = (void*)enc;
+
         /* 
          * we are not sending the size of the actual encrypted data but the size
          * of the original message aligned with cbc_blocksize (16) so if msg
@@ -313,6 +338,7 @@ int mqtt_publish_aes_cbc(unsigned char *enc, size_t cbc_len)
         msg.retained = 0;
 
         ret = MQTTPublish(&ctx->client, ctx->topic_pub, &msg);
+
         if (ret < 0) {
                 mqtt_disconnect();
                 return -1;

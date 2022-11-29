@@ -13,9 +13,8 @@ void reverse_bits_order(unsigned char *b, size_t size)
 void xor_bits(unsigned char *b, size_t size)
 {
         size_t i;
-        for (i = 0; i <= size; i++) {
+        for (i = 0; i <= size; i++)
                 *b = *b ^ 1;
-        }
 }
 
 void concatenate(char dst[], char src[])
@@ -23,9 +22,8 @@ void concatenate(char dst[], char src[])
         int c = 0;
         int d = 0;
 
-        while (dst[c] != '\0') {
+        while (dst[c] != '\0')
                 c++;
-        }
 
         while (src[d] != '\0') {
                 dst[c] = src[d];

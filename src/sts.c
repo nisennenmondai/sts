@@ -47,17 +47,16 @@ static void _extract_pubkey(char *X, char *Y, struct sts_message *msg)
 int sts_load_config(const char *config)
 {
         FILE *fp;
-
-        fp = fopen(config, "r");
-        if (fp == NULL)
-        {
-                ERROR("sts: while opening config file -> start [FILE]\n");
-                return -1;
-        }
-
         char key[CONF_KEY_MAXLEN] = {0};
         char cmp[2] = {0};
         char value[CONF_VAL_MAXLEN] = {0};
+
+        fp = fopen(config, "r");
+
+        if (fp == NULL) {
+                ERROR("sts: while opening config file -> start [FILE]\n");
+                return -1;
+        }
 
         while (fscanf(fp, "%s %s %s ", key, cmp, value) != EOF) {
 
@@ -153,12 +152,11 @@ void sts_parse_msg(char *inc, struct sts_message *msg)
 
         /* extract data */
         for (i = 0; i < STS_DATASIZE; i++) {
-                if (inc[idx + i] != '\0') {
+                if (inc[idx + i] != '\0')
                         msg->data[i] = inc[idx + i];
-                } 
-                if (inc[idx + i] == '\0') {
+
+                if (inc[idx + i] == '\0') 
                         break;
-                }
         }
 }
 
@@ -287,6 +285,7 @@ int sts_send_nosec(char *str)
         }
 
         ret = mqtt_publish(str);
+
         if (ret < 0) {
                 ERROR("sts: mqtt_publish()\n");
                 return -1;
@@ -334,6 +333,7 @@ int sts_send_sec(char *str)
                 }
 
                 ret = mqtt_publish_aes_ecb(enc, ecb_len);
+
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish_aes_ecb()\n");
                         return -1;
@@ -350,6 +350,7 @@ int sts_send_sec(char *str)
                 }
 
                 ret = mqtt_publish_aes_cbc(enc, cbc_len);
+
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish_aes_cbc()\n");
                         return -1;
@@ -364,9 +365,9 @@ int sts_init(const char *config)
 
         sts_reset_ctx();
         ret = sts_load_config(config);
-        if (ret < 0) {
+
+        if (ret < 0)
                 return -1;
-        }
 
         mqtt_init();
         return 0;
@@ -396,10 +397,12 @@ int sts_init_sec(void)
         mbedtls_ecdh_init(&ctx.host_ecdh_ctx);
 
         ret = mbedtls_ecdh_setup(&ctx.host_ecdh_ctx, MBEDTLS_ECP_DP_CURVE25519);
+
         if (ret != 0) {
                 ERROR("sts: mbedtls_ecdh_setup()\n");
                 return -1;
         }
+
         ret = mbedtls_ecdh_gen_public(&ctx.host_ecdh_ctx.grp, 
                         &ctx.host_ecdh_ctx.d, &ctx.host_ecdh_ctx.Q, 
                         sts_drbg, NULL);
@@ -418,6 +421,7 @@ int sts_init_sec(void)
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
+
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish()\n");
                         return -1;
@@ -425,7 +429,7 @@ int sts_init_sec(void)
 
                 /* wait INITACK from slave */
                 TRACE("sts: Waiting INITACK from slave\n");
-                while (ctx.master_flag == STS_STEP_0) {};
+                while (ctx.master_flag == STS_STEP_0);
 
 
                 /* send KEYREQ to slave */
@@ -433,10 +437,12 @@ int sts_init_sec(void)
                 memset(msg_out, 0, sizeof(msg_out));
                 ret = mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.X, 16, 
                                 master_QX, MPI_STRING_SIZE, &olen);
+
                 if (ret != 0) {
                         ERROR("sts: mbedtls_mpi_write_string()\n");
                         return -1;
                 }
+
                 ret = mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.Y, 16, 
                                 master_QY, MPI_STRING_SIZE, &olen);
                 if (ret != 0) {
@@ -451,6 +457,7 @@ int sts_init_sec(void)
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
+
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish()\n");
                         return -1;
@@ -458,11 +465,11 @@ int sts_init_sec(void)
 
                 /* wait KEYACK from slave */
                 TRACE("sts: Waiting KEYACK from slave\n");
-                while (ctx.master_flag == STS_STEP_1) {};
+                while (ctx.master_flag == STS_STEP_1);
 
                 /* wait KEYREQ from slave */
                 TRACE("sts: Waiting KEYREQ from slave\n");
-                while (ctx.master_flag == STS_STEP_2) {};
+                while (ctx.master_flag == STS_STEP_2);
 
                 /* send KEYACK to slave */
                 TRACE("sts: Sending KEYACK to slave\n");
@@ -471,6 +478,7 @@ int sts_init_sec(void)
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
+
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish()\n");
                         return -1;
@@ -485,7 +493,7 @@ int sts_init_sec(void)
         if (strcmp(ctx.sts_mode, STS_SECSLAVE) == 0) {
                 /* wait INITREQ from master */
                 TRACE("sts: Waiting INITREQ from master\n");
-                while (ctx.slave_flag == STS_STEP_0) {};
+                while (ctx.slave_flag == STS_STEP_0);
 
                 /* send INITACK to master */
                 TRACE("sts: Sending INITACK to master\n");
@@ -494,6 +502,7 @@ int sts_init_sec(void)
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
+
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish()\n");
                         return -1;
@@ -501,7 +510,7 @@ int sts_init_sec(void)
 
                 /* wait KEYREQ from master */
                 TRACE("sts: Waiting KEYREQ from master\n");
-                while (ctx.slave_flag == STS_STEP_1) {};
+                while (ctx.slave_flag == STS_STEP_1);
 
                 /* send KEYACK to master */
                 TRACE("sts: Sending KEYACK to master\n");
@@ -510,6 +519,7 @@ int sts_init_sec(void)
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
+
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish()\n");
                         return -1;
@@ -523,8 +533,10 @@ int sts_init_sec(void)
                         ERROR("sts: mbedtls_mpi_write_string()\n");
                         return -1;
                 }
+
                 ret = mbedtls_mpi_write_string(&ctx.host_ecdh_ctx.Q.Y, 16, 
                                 slave_QY, MPI_STRING_SIZE, &olen);
+
                 if (ret != 0) {
                         ERROR("sts: mbedtls_mpi_write_string()\n");
                         return -1;
@@ -538,6 +550,7 @@ int sts_init_sec(void)
 
                 ctx.no_print_out = 1;
                 ret = mqtt_publish(msg_out);
+
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish()\n");
                         return -1;
@@ -545,7 +558,7 @@ int sts_init_sec(void)
 
                 /* wait KEYACK from master */
                 TRACE("sts: Waiting KEYACK from master\n");
-                while (ctx.slave_flag == STS_STEP_2) {};
+                while (ctx.slave_flag == STS_STEP_2);
 
                 /* wait for master to finish */
                 sleep(1);
