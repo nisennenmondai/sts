@@ -4,6 +4,50 @@
 #include "sts.h"
 #include "tools.h"
 
+int sts_status(char **argv)
+{
+        (void)argv;
+        struct sts_context *ctx;
+        ctx = sts_get_ctx();
+
+        if (ctx->status == STS_STOPPED) {
+                INFO("sts: status:          OFFLINE\n");
+                return STS_PROMPT;
+        }
+
+        INFO("sts: status:            ONLINE\n");
+        INFO("sts: +==========================================+\n");
+        INFO("sts: | MQTT                                     |\n");
+        INFO("sts: +==========================================+\n");
+        INFO("sts: | mqtt version:    %u\n", MQTT_VERSION);
+        INFO("sts: | broker_url:      %s\n", ctx->url);
+        INFO("sts: | broker_port:     %u\n", ctx->port);
+        INFO("sts: | username:        %s\n", ctx->username);
+        INFO("sts: | password:        %s\n", ctx->password);
+        INFO("sts: | sub_topic:       %s\n", ctx->topic_sub);
+        INFO("sts: | pub_topic:       %s\n", ctx->topic_pub);
+        INFO("sts: | client_id:       %s\n", ctx->clientid);
+        INFO("sts: +==========================================+\n");
+        INFO("sts: | STS                                      |\n");
+        INFO("sts: +==========================================+\n");
+        INFO("sts: | sts_mode:        %s\n", ctx->sts_mode);
+        INFO("sts: | msg sent:        %u\n", ctx->msg_sent);
+        INFO("sts: | msg recv:        %u\n", ctx->msg_recv);
+
+        if (ctx->encryption == 1) {
+                INFO("sts: +==========================================+\n");
+                INFO("sts: | ENCRYPTION                               |\n");
+                INFO("sts: +==========================================+\n");
+                INFO("sts: | key agreement protocole: ECDH\n");
+                INFO("sts: | elliptic curve:          SECP256K1\n");
+                INFO("sts: | symmetric cipher:        AES-%s-256\n", ctx->aes);
+                INFO("sts: +==========================================+\n");
+        } else {
+                INFO("sts: +==========================================+\n");
+        }
+        return STS_PROMPT;
+}
+
 int sts_start_session(char **argv)
 {
         (void)argv;
@@ -74,7 +118,8 @@ int sts_stop_session(char **argv)
         alarm(10); /* 10 seconds to stop session or exit */
         (void)argv;
         int ret;
-        struct sts_context *ctx = sts_get_ctx();
+        struct sts_context *ctx;
+        ctx = sts_get_ctx();
 
         if (ctx->status == STS_STOPPED) {
                 ERROR("sts: session not started\n");
@@ -108,57 +153,17 @@ int sts_stop_session(char **argv)
         return STS_PROMPT;
 }
 
-int sts_status(char **argv)
-{
-        (void)argv;
-        struct sts_context *ctx = sts_get_ctx();
-
-        if (ctx->status == STS_STOPPED) {
-                INFO("sts: status:          OFFLINE\n");
-                return STS_PROMPT;
-        }
-
-        INFO("sts: status:            ONLINE\n");
-        INFO("sts: +==========================================+\n");
-        INFO("sts: | MQTT                                     |\n");
-        INFO("sts: +==========================================+\n");
-        INFO("sts: | mqtt version:    %u\n", MQTT_VERSION);
-        INFO("sts: | broker_url:      %s\n", ctx->url);
-        INFO("sts: | broker_port:     %u\n", ctx->port);
-        INFO("sts: | username:        %s\n", ctx->username);
-        INFO("sts: | password:        %s\n", ctx->password);
-        INFO("sts: | sub_topic:       %s\n", ctx->topic_sub);
-        INFO("sts: | pub_topic:       %s\n", ctx->topic_pub);
-        INFO("sts: | client_id:       %s\n", ctx->clientid);
-        INFO("sts: +==========================================+\n");
-        INFO("sts: | STS                                      |\n");
-        INFO("sts: +==========================================+\n");
-        INFO("sts: | sts_mode:        %s\n", ctx->sts_mode);
-        INFO("sts: | msg sent:        %u\n", ctx->msg_sent);
-        INFO("sts: | msg recv:        %u\n", ctx->msg_recv);
-
-        if (ctx->encryption == 1) {
-                INFO("sts: +==========================================+\n");
-                INFO("sts: | ENCRYPTION                               |\n");
-                INFO("sts: +==========================================+\n");
-                INFO("sts: | key agreement protocole: ECDH\n");
-                INFO("sts: | elliptic curve:          SECP256K1\n");
-                INFO("sts: | symmetric cipher:        AES-%s-256\n", ctx->aes);
-                INFO("sts: +==========================================+\n");
-        } else {
-                INFO("sts: +==========================================+\n");
-        }
-        return STS_PROMPT;
-}
-
 int sts_test_send_nosec(char **message)
 {
+        int i;
         int ret;
-        int i = 1;
-        size_t msg_size = 0;
+        size_t msg_size;
         char msg_out[STS_MSG_MAXLEN];
-        struct sts_context *ctx = sts_get_ctx();
+        struct sts_context *ctx;
 
+        i = 1;
+        msg_size = 0;
+        ctx = sts_get_ctx();
         memset(msg_out, 0, sizeof(msg_out));
 
         if (ctx->status == STS_STOPPED) {
@@ -206,11 +211,14 @@ int sts_test_send_nosec(char **message)
 int sts_test_send_sec(char **message)
 {
         int ret;
-        size_t i = 1;
-        size_t size = 0;
+        size_t i;
+        size_t size;
         char str[STS_DATASIZE];
-        struct sts_context *ctx = sts_get_ctx();
+        struct sts_context *ctx;
 
+        i = 1;
+        size = 0;
+        ctx = sts_get_ctx();
         memset(str, 0, sizeof(str));
 
         if (ctx->status == STS_STOPPED) {

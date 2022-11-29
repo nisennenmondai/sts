@@ -129,6 +129,19 @@ struct sts_context {
 int sts_load_config(const char *config);
 
 /*
+ * @brief               extract sts header and data.
+ * @param inc           incoming message.
+ * @parem msg           sts message with extracted header and data.
+ */
+void sts_parse_msg(char *inc, struct sts_message *msg);
+
+/*
+ * @brief               handle incoming sts message regarding their types
+ * @parem msg           sts message with extracted header and data.
+ */
+void sts_msg_handlers(struct sts_message *msg);
+
+/*
  * @brief               sts initialization.
  * @param config        path to config file.
  * @return              -1 if can't init sts.
@@ -164,19 +177,6 @@ int sts_send_nosec(char *str);
  * @return              -1 if fails to send message.
  */
 int sts_send_sec(char *str);
-
-/*
- * @brief               extract sts header and data.
- * @param inc           incoming message.
- * @parem msg           sts message with extracted header and data.
- */
-void sts_parse_msg(char *inc, struct sts_message *msg);
-
-/*
- * @brief               handle incoming sts message regarding their types
- * @parem msg           sts message with extracted header and data.
- */
-void sts_msg_handlers(struct sts_message *msg);
 
 /*
  * @brief       retrieve context.

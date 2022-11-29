@@ -15,8 +15,8 @@ void sha256_test(void)
         size_t size;
         size_t olen;
         size_t cbc_len;
+        char *msg;
 
-        char *msg = "CORE-TEX_LABS: Deadman, PafLeChien, max1point";
         unsigned char host_derived_key[ECDH_KEYSIZE_BYTES];
         unsigned char remote_derived_key[ECDH_KEYSIZE_BYTES];
         unsigned char message[STS_MSG_MAXLEN];
@@ -42,6 +42,7 @@ void sha256_test(void)
         mbedtls_aes_init(&remote_aes_ctx);
 
         count = 0;
+        msg = "CORE-TEX_LABS: Deadman, PafLeChien, max1point";
 
         /* ecdh shared secret */
         ret = mbedtls_ecdh_setup(&host_ecdh_ctx, MBEDTLS_ECP_DP_CURVE25519);
@@ -156,11 +157,16 @@ void sha256_test(void)
         mbedtls_ecdh_free(&remote_ecdh_ctx);
         printf("\n");
 
-        if (count == NUMBER_TESTS)
+        if (count == NUMBER_TESTS) {
                 TESTS("TESTS PASSED: %d/%d\n", count, NUMBER_TESTS);
+                INFO("----------------------------------------->\n\n");
 
-        else 
+        }
+
+        else {
                 TESTS("TESTS FAILED: %d/%d\n", count, NUMBER_TESTS);
+                INFO("----------------------------------------->\n\n");
+        }
 }
 
 int main(void)

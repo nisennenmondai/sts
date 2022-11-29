@@ -15,8 +15,8 @@ void ecdh_aes_cbc_test(void)
         size_t size;
         size_t olen;
         size_t cbc_len;
-        
-        char *msg = "CORE-TEX_LABS: Deadman, PafLeChien, max1point";
+        char *msg;
+
         unsigned char host_derived_key[ECDH_KEYSIZE_BYTES];
         unsigned char remote_derived_key[ECDH_KEYSIZE_BYTES];
         unsigned char message[STS_MSG_MAXLEN];
@@ -38,6 +38,7 @@ void ecdh_aes_cbc_test(void)
         mbedtls_aes_init(&remote_aes_ctx);
 
         count = 0;
+        msg = "CORE-TEX_LABS: Deadman, PafLeChien, max1point";
 
         /* test 1.0 */
         ret = mbedtls_ecdh_setup(&host_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
@@ -132,7 +133,7 @@ void ecdh_aes_cbc_test(void)
         }
 
         /* 5.0 */
-        
+
 
         size = strlen(msg);
         memcpy(message, msg, size);
@@ -198,11 +199,16 @@ void ecdh_aes_cbc_test(void)
         mbedtls_ecdh_free(&host_ecdh_ctx);
         mbedtls_ecdh_free(&remote_ecdh_ctx);
 
-        if (count == NUMBER_TESTS)
+        if (count == NUMBER_TESTS) {
                 TESTS("TESTS PASSED: %d/%d\n", count, NUMBER_TESTS);
+                INFO("----------------------------------------->\n\n");
 
-        else
+        }
+
+        else {
                 TESTS("TESTS FAILED: %d/%d\n", count, NUMBER_TESTS);
+                INFO("----------------------------------------->\n\n");
+        }
 }
 
 int main(void)

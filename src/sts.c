@@ -20,8 +20,11 @@ static struct sts_context ctx = {
 static void _extract_pubkey(char *X, char *Y, struct sts_message *msg)
 {
         int i;
-        int idx_X = 0;
-        int idx_Y = 0;
+        int idx_X;
+        int idx_Y;
+
+        idx_X = 0;
+        idx_Y = 0;
 
         /* extract slave public key X */
         for (i = 0; i < STS_DATASIZE; i++) {
@@ -47,8 +50,8 @@ static void _extract_pubkey(char *X, char *Y, struct sts_message *msg)
 int sts_load_config(const char *config)
 {
         FILE *fp;
-        char key[CONF_KEY_MAXLEN] = {0};
         char cmp[2] = {0};
+        char key[CONF_KEY_MAXLEN] = {0};
         char value[CONF_VAL_MAXLEN] = {0};
 
         fp = fopen(config, "r");
@@ -139,7 +142,9 @@ int sts_load_config(const char *config)
 void sts_parse_msg(char *inc, struct sts_message *msg)
 {
         size_t i;
-        int idx = 0;
+        int idx;
+
+        idx = 0;
 
         /* extract header */
         for (i = 0; i < STS_HEADERSIZE; i++) {
@@ -270,95 +275,6 @@ void sts_msg_handlers(struct sts_message *msg)
         }
 }
 
-int sts_send_nosec(char *str)
-{
-        int ret;
-
-        if (ctx.status == STS_STOPPED) {
-                ERROR("sts: session not started\n");
-                return -1;
-        }
-
-        if (ctx.encryption == 1) {
-                ERROR("sts: encryption ON, use 'send_sec()' instead\n");
-                return -1;
-        }
-
-        ret = mqtt_publish(str);
-
-        if (ret < 0) {
-                ERROR("sts: mqtt_publish()\n");
-                return -1;
-        }
-        return 0;
-}
-
-int sts_send_sec(char *str)
-{
-        int ret;
-        size_t ecb_len = 0;
-        size_t cbc_len = 0;
-        unsigned char msg[STS_MSG_MAXLEN];
-        unsigned char enc[STS_MSG_MAXLEN];
-
-        memset(msg, 0, sizeof(msg));
-        memset(enc, 0, sizeof(enc));
-
-        if (ctx.status == STS_STOPPED) {
-                ERROR("sts: session not started\n");
-                return -1;
-        }
-
-        if(ctx.encryption == 0) {
-                ERROR("sts: encryption OFF, use 'send_nosec()' instead\n");
-                return -1;
-        }
-
-        if (ctx.kill_flag == 1) {
-                ctx.no_print_out = 1;
-                /* if sending a KILL msg, don't add ENC header */
-                concatenate((char*)msg, str);
-
-        } else {
-                concatenate((char*)msg, STS_ENC);
-                concatenate((char*)msg, str);
-        }
-
-        if (strcmp(ctx.aes, AES_ECB) == 0) {
-                ret = sts_encrypt_aes_ecb(&ctx.host_aes_ctx_enc, msg,
-                                enc, strlen((char*)msg), &ecb_len);
-                if (ret != 0) {
-                        ERROR("sts: sts_encrypt_aes_ecb()\n");
-                        return -1;
-                }
-
-                ret = mqtt_publish_aes_ecb(enc, ecb_len);
-
-                if (ret < 0) {
-                        ERROR("sts: mqtt_publish_aes_ecb()\n");
-                        return -1;
-                }
-        }
-
-        if (strcmp(ctx.aes, AES_CBC) == 0) {
-                ret = sts_encrypt_aes_cbc(&ctx.host_aes_ctx_enc,
-                                ctx.derived_key, msg, enc,
-                                strlen((char*)msg), &cbc_len);
-                if (ret != 0) {
-                        ERROR("sts: sts_encrypt_aes_cbc()\n");
-                        return -1;
-                }
-
-                ret = mqtt_publish_aes_cbc(enc, cbc_len);
-
-                if (ret < 0) {
-                        ERROR("sts: mqtt_publish_aes_cbc()\n");
-                        return -1;
-                }
-        }
-        return 0;
-}
-
 int sts_init(const char *config)
 {
         int ret;
@@ -376,7 +292,7 @@ int sts_init(const char *config)
 int sts_init_sec(void)
 {
         int ret;
-        size_t olen = 0;
+        size_t olen;
         char msg_out[STS_MSG_MAXLEN];
         char slave_QX[MPI_STRING_SIZE];
         char slave_QY[MPI_STRING_SIZE];
@@ -385,6 +301,8 @@ int sts_init_sec(void)
 
         ctx.master_flag = STS_STEP_0;
         ctx.slave_flag = STS_STEP_0;
+
+        olen = 0;
 
         memset(msg_out, 0, sizeof(msg_out));
         memset(slave_QX, 0, sizeof(slave_QX));
@@ -598,6 +516,98 @@ void sts_reset_ctx(void)
         memset(ctx.sts_mode,    0, sizeof(ctx.sts_mode));
         memset(ctx.aes,         0, sizeof(ctx.aes));
         memset(ctx.url,         0, sizeof(ctx.url));
+}
+
+int sts_send_nosec(char *str)
+{
+        int ret;
+
+        if (ctx.status == STS_STOPPED) {
+                ERROR("sts: session not started\n");
+                return -1;
+        }
+
+        if (ctx.encryption == 1) {
+                ERROR("sts: encryption ON, use 'send_sec()' instead\n");
+                return -1;
+        }
+
+        ret = mqtt_publish(str);
+
+        if (ret < 0) {
+                ERROR("sts: mqtt_publish()\n");
+                return -1;
+        }
+        return 0;
+}
+
+int sts_send_sec(char *str)
+{
+        int ret;
+        size_t ecb_len;
+        size_t cbc_len;
+        unsigned char msg[STS_MSG_MAXLEN];
+        unsigned char enc[STS_MSG_MAXLEN];
+
+        ecb_len = 0;
+        cbc_len = 0;
+
+        memset(msg, 0, sizeof(msg));
+        memset(enc, 0, sizeof(enc));
+
+        if (ctx.status == STS_STOPPED) {
+                ERROR("sts: session not started\n");
+                return -1;
+        }
+
+        if(ctx.encryption == 0) {
+                ERROR("sts: encryption OFF, use 'send_nosec()' instead\n");
+                return -1;
+        }
+
+        if (ctx.kill_flag == 1) {
+                ctx.no_print_out = 1;
+                /* if sending a KILL msg, don't add ENC header */
+                concatenate((char*)msg, str);
+
+        } else {
+                concatenate((char*)msg, STS_ENC);
+                concatenate((char*)msg, str);
+        }
+
+        if (strcmp(ctx.aes, AES_ECB) == 0) {
+                ret = sts_encrypt_aes_ecb(&ctx.host_aes_ctx_enc, msg,
+                                enc, strlen((char*)msg), &ecb_len);
+                if (ret != 0) {
+                        ERROR("sts: sts_encrypt_aes_ecb()\n");
+                        return -1;
+                }
+
+                ret = mqtt_publish_aes_ecb(enc, ecb_len);
+
+                if (ret < 0) {
+                        ERROR("sts: mqtt_publish_aes_ecb()\n");
+                        return -1;
+                }
+        }
+
+        if (strcmp(ctx.aes, AES_CBC) == 0) {
+                ret = sts_encrypt_aes_cbc(&ctx.host_aes_ctx_enc,
+                                ctx.derived_key, msg, enc,
+                                strlen((char*)msg), &cbc_len);
+                if (ret != 0) {
+                        ERROR("sts: sts_encrypt_aes_cbc()\n");
+                        return -1;
+                }
+
+                ret = mqtt_publish_aes_cbc(enc, cbc_len);
+
+                if (ret < 0) {
+                        ERROR("sts: mqtt_publish_aes_cbc()\n");
+                        return -1;
+                }
+        }
+        return 0;
 }
 
 struct sts_context *sts_get_ctx(void)

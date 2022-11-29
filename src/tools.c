@@ -3,6 +3,7 @@
 void reverse_bits_order(unsigned char *b, size_t size)
 {
         size_t i;
+
         for (i = 0; i < size; i++) {
                 b[i] = (b[i] & 0xF0) >> 4 | (b[i] & 0x0F) << 4;
                 b[i] = (b[i] & 0xCC) >> 2 | (b[i] & 0x33) << 2;
@@ -13,14 +14,33 @@ void reverse_bits_order(unsigned char *b, size_t size)
 void xor_bits(unsigned char *b, size_t size)
 {
         size_t i;
+
         for (i = 0; i <= size; i++)
                 *b = *b ^ 1;
 }
 
+void uchar_bin_to_hex(unsigned char enc_msg[], char *hex, int size) 
+{
+        int i;
+        char *p;
+        static const char* hex_lookup = "0123456789ABCDEF";
+
+        p = hex;
+
+        for (i = 0 ; i != size ; i++) {
+                *p++ = hex_lookup[enc_msg[i] >> 4];
+                *p++ = hex_lookup[enc_msg[i] & 0x0F];
+        }
+        *p = '\0';
+}
+
 void concatenate(char dst[], char src[])
 {
-        int c = 0;
-        int d = 0;
+        int c;
+        int d;
+
+        c = 0;
+        d = 0;
 
         while (dst[c] != '\0')
                 c++;

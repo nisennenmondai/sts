@@ -61,12 +61,12 @@ static void print(const char *message, ...)
 {
         int c;
         int d;
-        unsigned int millisec;
         va_list args;
         struct timeval tv;
         struct tm* tm_info;
         char ms[MSSIZE];
         char buffer[BUFFSIZE];
+        unsigned int millisec;
 
         va_start(args, message);    
 

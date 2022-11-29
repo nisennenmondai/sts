@@ -39,45 +39,7 @@ static int sts_num_builtins(void)
         return sizeof(builtin_cmd) / sizeof(char *);
 }
 
-void sts_sig_handler(int signum)
-{
-        struct sts_context *ctx = sts_get_ctx();
 
-        if (signum == SIGINT) {
-                INFO("sts: SIGINT Ctrl-C\n");
-
-                if (ctx->status == STS_STARTED)
-                        sts_stop_session(NULL);
-
-                INFO("sts: exiting sts...\n");
-                exit(EXIT_SUCCESS);
-        }
-
-        if (signum == SIGUSR1) {
-                INFO("sts: closing session...\n");
-
-                if (ctx->status == STS_STARTED)
-                        sts_stop_session(NULL);
-        }
-
-        if (signum == SIGALRM) {
-                INFO("sts: timer's up, exiting sts...\n");
-                exit(EXIT_SUCCESS);
-        }
-}
-
-void sts_welcome(void)
-{
-        printf("+--------------------------------------------------------------+\n");
-        printf("|                    Secure Telemetry Shell                    |\n");
-        printf("+--------------------------------------------------------------+\n");
-        printf("|                                                              |\n");
-        printf("| 'help' to display command list                               |\n");
-        printf("|                                                              |\n");
-        printf("| https://github.com/nisennenmondai                            |\n");
-        printf("|                                                              |\n");
-        printf("+--------------------------------------------------------------+\n");
-}
 
 static char *sts_read_line(void)
 {
@@ -122,10 +84,14 @@ static char *sts_read_line(void)
 
 static char **sts_split_line(char *line)
 {
-        int position = 0;
-        int buffsize = STS_TOK_BUFFSIZE;
+        int position;
+        int buffsize;
         char *token;
-        char **tokens = malloc(buffsize * sizeof(char*));
+        char **tokens;
+
+        position = 0;
+        buffsize = STS_TOK_BUFFSIZE;
+        tokens = malloc(buffsize * sizeof(char*));
 
         /* check if buffer has been allocated */
         if (!tokens) {
@@ -163,11 +129,13 @@ static char **sts_split_line(char *line)
 /* this function launches a process */
 static int sts_launch(char **argv)
 {
-        pid_t pid, wpid;
+        pid_t pid;
+        pid_t wpid;
         int status;
         (void)wpid;
 
         pid = fork();
+
         if (pid == 0) {
                 /* child process, execute program by providing filename, vector 
                  * argv */
@@ -211,6 +179,35 @@ static int sts_execute(char **argv)
         return sts_launch(argv);
 }
 
+void sts_sig_handler(int signum)
+{
+        struct sts_context *ctx;
+
+        ctx = sts_get_ctx();
+
+        if (signum == SIGINT) {
+                INFO("sts: SIGINT Ctrl-C\n");
+
+                if (ctx->status == STS_STARTED)
+                        sts_stop_session(NULL);
+
+                INFO("sts: exiting sts...\n");
+                exit(EXIT_SUCCESS);
+        }
+
+        if (signum == SIGUSR1) {
+                INFO("sts: closing session...\n");
+
+                if (ctx->status == STS_STARTED)
+                        sts_stop_session(NULL);
+        }
+
+        if (signum == SIGALRM) {
+                INFO("sts: timer's up, exiting sts...\n");
+                exit(EXIT_SUCCESS);
+        }
+}
+
 /* loop getting input and executing it */
 void sts_loop(void)
 {
@@ -228,6 +225,19 @@ void sts_loop(void)
                 free(argv);
         } while (status);
         return;
+}
+
+void sts_welcome(void)
+{
+        printf("+--------------------------------------------------------------+\n");
+        printf("|                    Secure Telemetry Shell                    |\n");
+        printf("+--------------------------------------------------------------+\n");
+        printf("|                                                              |\n");
+        printf("| 'help' to display command list                               |\n");
+        printf("|                                                              |\n");
+        printf("| https://github.com/nisennenmondai                            |\n");
+        printf("|                                                              |\n");
+        printf("+--------------------------------------------------------------+\n");
 }
 
 int sts_help(char **argv)

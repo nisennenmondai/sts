@@ -9,13 +9,14 @@ void ecdh_aes_ecb_test(void)
         TESTS("+================================================+\n");
         TESTS("|           ECDH SECP256K1 - AES-ECB-256         |\n");
         TESTS("+================================================+\n");
+
+        int ret;
+        int count;
         size_t size;
         size_t olen;
         size_t ecb_len;
-        int ret;
-        int count = 0;
+        char *msg;
 
-        char *msg = "CORE-TEX_LABS: Deadman, PafLeChien, max1point";
         unsigned char host_derived_key[ECDH_KEYSIZE_BYTES];
         unsigned char remote_derived_key[ECDH_KEYSIZE_BYTES];
         unsigned char message[STS_MSG_MAXLEN];
@@ -29,6 +30,9 @@ void ecdh_aes_ecb_test(void)
 
         mbedtls_ecdh_init(&host_ecdh_ctx);
         mbedtls_ecdh_init(&remote_ecdh_ctx);
+
+        count = 0;
+        msg = "CORE-TEX_LABS: Deadman, PafLeChien, max1point";
 
         /* test 1.0 */
         ret = mbedtls_ecdh_setup(&host_ecdh_ctx, MBEDTLS_ECP_DP_SECP256K1);
@@ -189,11 +193,17 @@ void ecdh_aes_ecb_test(void)
         mbedtls_aes_free(&host_aes_ctx);
         mbedtls_aes_free(&remote_aes_ctx);
 
-        if (count == NUMBER_TESTS)
+        if (count == NUMBER_TESTS) {
                 TESTS("TESTS PASSED: %d/%d\n", count, NUMBER_TESTS);
+                INFO("----------------------------------------->\n\n");
 
-        else
+        }
+
+        else {
                 TESTS("TESTS FAILED: %d/%d\n", count, NUMBER_TESTS);
+                INFO("----------------------------------------->\n\n");
+        }
+
 }
 
 int main(void)

@@ -25,7 +25,9 @@ int sts_verify_keysize(const unsigned char *key, size_t size, size_t len)
 {
         size_t i;
         size_t keylen;
-        int tmp = 0; 
+        int tmp;
+
+        tmp = 0;
 
         for (i = 0 ; i < size; i++) {
                 if (key[i] == '\0')
@@ -44,6 +46,7 @@ int sts_verify_hash(unsigned char *digest_a, unsigned char *digest_b)
 {
         int i;
         int idx;
+
         for (i = 0; i < HASH_SIZE; i++) {
                 if (digest_a[i] == digest_b[i]) {
                         idx++;
@@ -54,96 +57,6 @@ int sts_verify_hash(unsigned char *digest_a, unsigned char *digest_b)
 
                 } else
                         return -1;
-        }
-        return 0;
-}
-
-int sts_drbg(void *rng_state, unsigned char *output, size_t len)
-{
-        int ret;
-
-        if (rng_state != NULL)
-                rng_state  = NULL;
-
-        mbedtls_ctr_drbg_context ctr_drbg;
-        mbedtls_entropy_context entropy;
-
-        mbedtls_ctr_drbg_init(&ctr_drbg);
-        mbedtls_entropy_init(&entropy);
-
-        ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, 
-                        (const unsigned char *) "RANDOM_GEN", 10);
-
-        if (ret != 0) {
-                ERROR("mbedtls_ctr_drbg_seed()\n");
-                goto cleanup;
-        }
-
-        ret = mbedtls_ctr_drbg_random(&ctr_drbg, output, sizeof(len));
-
-        if (ret != 0) {
-                ERROR("mbedtls_ctr_drbg_random()\n");
-                goto cleanup;
-        }
-
-cleanup:
-        mbedtls_ctr_drbg_free(&ctr_drbg);
-        mbedtls_entropy_free(&entropy);
-        return ret;
-}
-
-
-int sts_compute_shared_secret(char *X, char *Y, struct sts_context *ctx)
-{
-        int ret;
-        size_t olen;
-
-        ret = mbedtls_ecp_point_read_string(&ctx->host_ecdh_ctx.Qp, 16, X, Y);
-
-        if (ret != 0) {
-                ERROR("sts: mbedtls_ecp_point_read_string()\n");
-                return -1;
-        }
-
-        memset(ctx->derived_key, 0, sizeof(ctx->derived_key));
-        ret = mbedtls_ecdh_calc_secret(&ctx->host_ecdh_ctx, 
-                        &olen, ctx->derived_key, 
-                        sizeof(ctx->derived_key), 
-                        sts_drbg, NULL);
-
-        if (ret != 0) {
-                ERROR("sts: mbedtls_ecdh_calc_secret()\n");
-                return -1;
-        }
-
-        /* 
-         * TODO sometimes derived_key is not 256 bits long, I don't know why 
-         * we need to verify it 
-         */
-        ret = sts_verify_keysize(ctx->derived_key, sizeof(ctx->derived_key), 
-                        ECDH_KEYSIZE_BITS);
-
-        if (ret != 0) {
-                ERROR("sts: derived key != %d bits in length (only %d bits), "
-                                "something went wrong, start a new session\n", 
-                                ECDH_KEYSIZE_BITS, ret);
-                return -1;
-        }
-
-        ret = mbedtls_aes_setkey_enc(&ctx->host_aes_ctx_enc, ctx->derived_key,
-                        ECDH_KEYSIZE_BITS);
-
-        if (ret != 0) {
-                ERROR("sts: mbedtls_aes_setkey_enc()\n");
-                return -1;
-        }
-
-        ret = mbedtls_aes_setkey_dec(&ctx->host_aes_ctx_dec, ctx->derived_key,
-                        ECDH_KEYSIZE_BITS);
-
-        if (ret != 0) {
-                ERROR("sts: mbedtls_aes_setkey_dec()\n");
-                return -1;
         }
         return 0;
 }
@@ -236,4 +149,93 @@ int sts_decrypt_aes_cbc(mbedtls_aes_context *ctx, unsigned char *iv,
         ret = mbedtls_aes_crypt_cbc(ctx, MBEDTLS_AES_DECRYPT, cbc_len, iv, 
                         input, output);
         return ret;
+}
+
+int sts_drbg(void *rng_state, unsigned char *output, size_t len)
+{
+        int ret;
+
+        if (rng_state != NULL)
+                rng_state  = NULL;
+
+        mbedtls_ctr_drbg_context ctr_drbg;
+        mbedtls_entropy_context entropy;
+
+        mbedtls_ctr_drbg_init(&ctr_drbg);
+        mbedtls_entropy_init(&entropy);
+
+        ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, 
+                        (const unsigned char *) "RANDOM_GEN", 10);
+
+        if (ret != 0) {
+                ERROR("mbedtls_ctr_drbg_seed()\n");
+                goto cleanup;
+        }
+
+        ret = mbedtls_ctr_drbg_random(&ctr_drbg, output, sizeof(len));
+
+        if (ret != 0) {
+                ERROR("mbedtls_ctr_drbg_random()\n");
+                goto cleanup;
+        }
+
+cleanup:
+        mbedtls_ctr_drbg_free(&ctr_drbg);
+        mbedtls_entropy_free(&entropy);
+        return ret;
+}
+
+int sts_compute_shared_secret(char *X, char *Y, struct sts_context *ctx)
+{
+        int ret;
+        size_t olen;
+
+        ret = mbedtls_ecp_point_read_string(&ctx->host_ecdh_ctx.Qp, 16, X, Y);
+
+        if (ret != 0) {
+                ERROR("sts: mbedtls_ecp_point_read_string()\n");
+                return -1;
+        }
+
+        memset(ctx->derived_key, 0, sizeof(ctx->derived_key));
+        ret = mbedtls_ecdh_calc_secret(&ctx->host_ecdh_ctx, 
+                        &olen, ctx->derived_key, 
+                        sizeof(ctx->derived_key), 
+                        sts_drbg, NULL);
+
+        if (ret != 0) {
+                ERROR("sts: mbedtls_ecdh_calc_secret()\n");
+                return -1;
+        }
+
+        /* 
+         * TODO sometimes derived_key is not 256 bits long, I don't know why 
+         * we need to verify it 
+         */
+        ret = sts_verify_keysize(ctx->derived_key, sizeof(ctx->derived_key), 
+                        ECDH_KEYSIZE_BITS);
+
+        if (ret != 0) {
+                ERROR("sts: derived key != %d bits in length (only %d bits), "
+                                "something went wrong, start a new session\n", 
+                                ECDH_KEYSIZE_BITS, ret);
+                return -1;
+        }
+
+        ret = mbedtls_aes_setkey_enc(&ctx->host_aes_ctx_enc, ctx->derived_key,
+                        ECDH_KEYSIZE_BITS);
+
+        if (ret != 0) {
+                ERROR("sts: mbedtls_aes_setkey_enc()\n");
+                return -1;
+        }
+
+        ret = mbedtls_aes_setkey_dec(&ctx->host_aes_ctx_dec, ctx->derived_key,
+                        ECDH_KEYSIZE_BITS);
+
+        if (ret != 0) {
+                ERROR("sts: mbedtls_aes_setkey_dec()\n");
+                return -1;
+        }
+        return 0;
 }

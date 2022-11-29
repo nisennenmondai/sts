@@ -11,9 +11,10 @@ void mqtt_test(void)
         TESTS("+================================================+\n");
 
         int ret;
-        int count = 0;
+        int count;
         struct sts_context *ctx;
 
+        count = 0;
         ctx = sts_get_ctx();
         ctx->no_print_out = 1;
         ctx->pid = getpid();
@@ -78,11 +79,16 @@ void mqtt_test(void)
 
         }
 
-        if (count == NUMBER_TESTS)
+        if (count == NUMBER_TESTS) {
                 TESTS("TESTS PASSED: %d/%d\n", count, NUMBER_TESTS);
+                INFO("----------------------------------------->\n\n");
 
-        else
+        }
+
+        else {
                 TESTS("TESTS FAILED: %d/%d\n", count, NUMBER_TESTS);
+                INFO("----------------------------------------->\n\n");
+        }
 
         printf("\n");
 }

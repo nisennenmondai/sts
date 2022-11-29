@@ -11,6 +11,27 @@
 #define STS_PROMPT 1
 
 /*
+ * @brief               shell sig handler
+ * @param signum        linux signal type
+ * @return              null
+ */
+void sts_sig_handler(int signum);
+
+/*
+ * @brief               shell loop
+ * @param               null
+ * @return              null
+ */
+void sts_loop(void);
+
+/*
+ * @brief               shell welcome message
+ * @param               null
+ * @return              null
+ */
+void sts_welcome(void);
+
+/*
  * @brief               print help in shell.
  * @param argv          null.
  * @return              STS_PROMPT
@@ -25,6 +46,13 @@ int sts_help(char **argv);
 int sts_exit(char **argv);
 
 /*
+ * @brief               print sts status in shell.
+ * @param argv          null.
+ * @return              STS_PROMPT.
+ */
+int sts_status(char **argv);
+
+/*
  * @brief               start a sts session.
  * @param argv          path to config file entered in shell.
  * @return              STS_PROMPT.
@@ -37,34 +65,6 @@ int sts_start_session(char **argv);
  * @return              STS_PROMPT.
  */
 int sts_stop_session(char **argv);
-
-/*
- * @brief               print sts status in shell.
- * @param argv          null.
- * @return              STS_PROMPT.
- */
-int sts_status(char **argv);
-
-/*
- * @brief               shell welcome message
- * @param               null
- * @return              null
- */
-void sts_welcome(void);
-
-/*
- * @brief               shell loop
- * @param               null
- * @return              null
- */
-void sts_loop(void);
-
-/*
- * @brief               shell sig handler
- * @param signum        linux signal type
- * @return              null
- */
-void sts_sig_handler(int signum);
 
 /*
  * @brief               test to send a message with no encryption.
