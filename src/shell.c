@@ -1,6 +1,7 @@
 #include "log.h"
 #include "sts.h"
 #include "shell.h"
+#include "shell_commands.h"
 
 static char *builtin_cmd[] = {
         "start",
@@ -24,6 +25,34 @@ static char *builtin_cmd_desc[] = {
         "exit              exit shell                                 |",
 };
 
+static int sts_num_builtins(void) 
+{
+        return sizeof(builtin_cmd) / sizeof(char *);
+}
+
+static int sts_help(char **argv)
+{
+        (void)argv;
+        int i;
+
+        printf("+--------------------------------------------------------------+\n");
+        printf("| Commands        | Description                                |\n");
+        printf("+--------------------------------------------------------------+\n");
+
+        for (i = 0; i < sts_num_builtins(); i++) {
+                printf("| %s\n",
+                                builtin_cmd_desc[i]);
+        }
+        printf("+--------------------------------------------------------------+\n");
+        return STS_PROMPT;
+}
+
+static int sts_exit(char **argv)
+{
+        (void)argv;
+        return STS_EXIT;
+}
+
 static int (*builtin_func[]) (char **argv) = {
         &sts_start_session,
         &sts_stop_session,
@@ -33,13 +62,6 @@ static int (*builtin_func[]) (char **argv) = {
         &sts_help,
         &sts_exit,
 };
-
-static int sts_num_builtins(void) 
-{
-        return sizeof(builtin_cmd) / sizeof(char *);
-}
-
-
 
 static char *sts_read_line(void)
 {
@@ -179,7 +201,39 @@ static int sts_execute(char **argv)
         return sts_launch(argv);
 }
 
-void sts_sig_handler(int signum)
+/* loop getting input and executing it */
+static void sts_loop(void)
+{
+        int status;
+        char *line;
+        char **argv;
+
+        do {
+                printf("> ");
+                line = sts_read_line();
+                argv = sts_split_line(line);
+                status = sts_execute(argv);
+
+                free(line);
+                free(argv);
+        } while (status);
+        return;
+}
+
+static void sts_welcome(void)
+{
+        printf("+--------------------------------------------------------------+\n");
+        printf("|                    Secure Telemetry Shell                    |\n");
+        printf("+--------------------------------------------------------------+\n");
+        printf("|                                                              |\n");
+        printf("| 'help' to display command list                               |\n");
+        printf("|                                                              |\n");
+        printf("| https://github.com/nisennenmondai                            |\n");
+        printf("|                                                              |\n");
+        printf("+--------------------------------------------------------------+\n");
+}
+
+static void sts_sig_handler(int signum)
 {
         struct sts_context *ctx;
 
@@ -208,57 +262,12 @@ void sts_sig_handler(int signum)
         }
 }
 
-/* loop getting input and executing it */
-void sts_loop(void)
+void sts_shell(void)
 {
-        int status;
-        char *line;
-        char **argv;
+        signal(SIGINT, sts_sig_handler);
+        signal(SIGUSR1, sts_sig_handler);
+        signal(SIGALRM, sts_sig_handler);
 
-        do {
-                printf("> ");
-                line = sts_read_line();
-                argv = sts_split_line(line);
-                status = sts_execute(argv);
-
-                free(line);
-                free(argv);
-        } while (status);
-        return;
-}
-
-void sts_welcome(void)
-{
-        printf("+--------------------------------------------------------------+\n");
-        printf("|                    Secure Telemetry Shell                    |\n");
-        printf("+--------------------------------------------------------------+\n");
-        printf("|                                                              |\n");
-        printf("| 'help' to display command list                               |\n");
-        printf("|                                                              |\n");
-        printf("| https://github.com/nisennenmondai                            |\n");
-        printf("|                                                              |\n");
-        printf("+--------------------------------------------------------------+\n");
-}
-
-int sts_help(char **argv)
-{
-        (void)argv;
-        int i;
-
-        printf("+--------------------------------------------------------------+\n");
-        printf("| Commands        | Description                                |\n");
-        printf("+--------------------------------------------------------------+\n");
-
-        for (i = 0; i < sts_num_builtins(); i++) {
-                printf("| %s\n",
-                                builtin_cmd_desc[i]);
-        }
-        printf("+--------------------------------------------------------------+\n");
-        return STS_PROMPT;
-}
-
-int sts_exit(char **argv)
-{
-        (void)argv;
-        return STS_EXIT;
+        sts_welcome();
+        sts_loop();
 }

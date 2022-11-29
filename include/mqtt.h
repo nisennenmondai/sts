@@ -49,6 +49,7 @@ int mqtt_publish(char *string);
  * @brief               publish to a topic with aes-ecb mode
  * @param enc           encrypted data.
  * @param ecb_len       encrypted data length aligned with ecb blocksize.
+ * @param str_size      size of original msg for the bin to hex func
  * @return              -1 if publish fails.
  */
 int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len, int str_size);
@@ -57,6 +58,7 @@ int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len, int str_size);
  * @brief               publish to a topic with aes-cbc mode
  * @param enc           encrypted data.
  * @param cbc_len       encrypted data length aligned with cbc blocksize.
+ * @param str_size      size of original msg for the bin to hex func
  * @return              -1 if publish fails.
  */
 int mqtt_publish_aes_cbc(unsigned char *enc, size_t cbc_len, int str_size);
