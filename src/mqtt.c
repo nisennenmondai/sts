@@ -3,6 +3,7 @@
 #include "log.h"
 #include "mqtt.h"
 #include "sec.h"
+#include "tools.h"
 
 static unsigned char sendbuff[SENDBUFFSIZE];
 static unsigned char readbuff[READBUFFSIZE];
@@ -270,9 +271,10 @@ int mqtt_publish(char *string)
         return 0;
 }
 
-int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len)
+int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len, int str_size)
 {
         int ret;
+        char hex[STS_MSG_MAXLEN * 2];
         struct sts_context *ctx;
         MQTTMessage msg;
 
@@ -304,7 +306,8 @@ int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len)
 
         /* echo */
         if (ctx->no_print_out == 0) {
-                INFO("[MQTT_OUT]: %s\n", enc);
+                uchar_bin_to_hex(enc, hex, str_size);
+                INFO("[MQTT_OUT]: %s\n", hex);
         }
         ctx->no_print_out = 0;
         ctx->msg_sent++;
@@ -312,9 +315,10 @@ int mqtt_publish_aes_ecb(unsigned char *enc, size_t ecb_len)
 }
 
 
-int mqtt_publish_aes_cbc(unsigned char *enc, size_t cbc_len)
+int mqtt_publish_aes_cbc(unsigned char *enc, size_t cbc_len, int str_size)
 {
         int ret;
+        char hex[STS_MSG_MAXLEN * 2];
         struct sts_context *ctx;
         MQTTMessage msg;
 
@@ -346,7 +350,8 @@ int mqtt_publish_aes_cbc(unsigned char *enc, size_t cbc_len)
 
         /* echo */
         if (ctx->no_print_out == 0) {
-                INFO("[MQTT_OUT]: %s\n", enc);
+                uchar_bin_to_hex(enc, hex, str_size);
+                INFO("[MQTT_OUT]: %s\n", hex);
         }
         ctx->no_print_out = 0;
         ctx->msg_sent++;

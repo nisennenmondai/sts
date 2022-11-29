@@ -73,6 +73,9 @@ the ones provided work just fine, it uses a public broker:
 
 **broker.hivemq.com**
 
+It is also possible to test it in local using mosquitto, launch a mosquitto broker
+and simply add "localhost" to the url field.
+
 | KEY  | VALUE (128 char max)| 
 | ------------- | ------------- |
 | **url**  | broker url  |
@@ -153,9 +156,5 @@ Key exchange agreement protocol used is **ECDH**, elliptic curve is
 operation are available, **ECB** and **CBC**.
 
 ### TODO
-- binary to hex function for better display of msg
 - implement sequence number on msg
 - maybe msg integrity with sha256?
-- refactoring
-- refactoring
-- refactoring

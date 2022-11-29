@@ -19,7 +19,7 @@ void xor_bits(unsigned char *b, size_t size)
                 *b = *b ^ 1;
 }
 
-void uchar_bin_to_hex(unsigned char enc_msg[], char *hex, int size) 
+void uchar_bin_to_hex(unsigned char *enc_msg, char *hex, int size) 
 {
         int i;
         char *p;

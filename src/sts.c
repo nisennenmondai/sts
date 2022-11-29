@@ -1,6 +1,6 @@
 #include "log.h"
-#include "mqtt.h"
 #include "sec.h"
+#include "mqtt.h"
 #include "tools.h"
 
 static struct sts_context ctx = {
@@ -583,7 +583,7 @@ int sts_send_sec(char *str)
                         return -1;
                 }
 
-                ret = mqtt_publish_aes_ecb(enc, ecb_len);
+                ret = mqtt_publish_aes_ecb(enc, ecb_len, strlen((char*)msg));
 
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish_aes_ecb()\n");
@@ -600,7 +600,7 @@ int sts_send_sec(char *str)
                         return -1;
                 }
 
-                ret = mqtt_publish_aes_cbc(enc, cbc_len);
+                ret = mqtt_publish_aes_cbc(enc, cbc_len, strlen((char*)msg));
 
                 if (ret < 0) {
                         ERROR("sts: mqtt_publish_aes_cbc()\n");
