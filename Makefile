@@ -17,8 +17,8 @@ CFLAGS += -Ilib/mbedtls/include/
 
 LDLIBS += -lm
 LDLIBS += -lpthread
-LDLIBS += -L$(PWD)/lib/paho-mqtt/MQTTClient-C/src -lpaho-embed-mqtt3cc
-LDLIBS += -L$(PWD)/lib/mbedtls/library -lmbedcrypto
+LDLIBS += -Llib/paho-mqtt/MQTTClient-C/src -lpaho-embed-mqtt3cc
+LDLIBS += -Llib/mbedtls/library -lmbedcrypto
 LDLIBS += -Wl,-rpath=$(PWD)/lib/mbedtls/library
 LDLIBS += -Wl,-rpath=$(PWD)/lib/paho-mqtt/MQTTClient-C/src
 
@@ -50,11 +50,8 @@ deps:
 	cd lib/paho-mqtt/; cmake .; make
 	cd lib/mbedtls/; cmake -DUSE_SHARED_MBEDTLS_LIBRARY=On .; make
 
-install:
-	cd lib/paho-mqtt; make install
-	cd lib/mbedtls; make install
-
 clean:
 	@$(RM) -rv $(BIN_DIR) $(OBJ_DIR)
+	cd tests/; make clean
 
 -include $(OBJ:.o=.d)

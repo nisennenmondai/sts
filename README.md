@@ -154,5 +154,6 @@ Key exchange agreement protocol used is **ECDH**, elliptic curve is
 operation are available, **ECB** and **CBC**.
 
 ### TODO
-- implement sequence number on msg
-- maybe msg integrity with sha256?
+- maybe sequence number on msg?
+- maybe msg integrity with SHA256?
+- and maybe digital signature with ECDSA?

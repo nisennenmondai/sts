@@ -10,6 +10,8 @@ SRC2 += $(SRC2_DIR)/ecdh_aes_cbc_256.c
 OBJ += $(SRC1:$(SRC1_DIR)/%.c=$(OBJ_DIR)/%.o)
 OBJ += $(SRC2:$(SRC2_DIR)/%.c=$(OBJ_DIR)/%.o)
 
+CFLAGS += -g
+CFLAGS += -MD
 CFLAGS += -Wall
 CFLAGS += -I../../include/
 CFLAGS += -I../../lib/paho-mqtt/MQTTClient-C/src/
