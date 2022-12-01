@@ -15,12 +15,14 @@ CFLAGS += -I../../include/
 CFLAGS += -I../../lib/paho-mqtt/MQTTClient-C/src/
 CFLAGS += -I../../lib/paho-mqtt/MQTTClient-C/src/linux/
 CFLAGS += -I../../lib/paho-mqtt/MQTTPacket/src/
-CFLAGS += -I../../lib/mbedtls/include/mbedtls/
+CFLAGS += -I../../lib/mbedtls/include/
 
-LDLIBS += -lpaho-embed-mqtt3cc
-LDLIBS += -lmbedcrypto
-LDLIBS += -lpthread
 LDLIBS += -lm
+LDLIBS += -lpthread
+LDLIBS += -L../../lib/paho-mqtt/MQTTClient-C/src -lpaho-embed-mqtt3cc
+LDLIBS += -L../../lib/mbedtls/library -lmbedcrypto
+LDLIBS += -Wl,-rpath=../../../lib/mbedtls/library
+LDLIBS += -Wl,-rpath=../../../lib/paho-mqtt/MQTTClient-C/src
 
 
 .PHONY: all clean

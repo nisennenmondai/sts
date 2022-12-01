@@ -37,11 +37,9 @@ STS uses a number of open source projects to work properly:
 
 ```sh
 make deps
-sudo make install
 make
 ```
 - **make deps** will download and build *paho-mqtt* and *mbedtls*
-- **sudo make install** will install *paho-mqtt* and *mbedtls* libraries
 - **make** will build *sts*
 
 ## **Tests**
