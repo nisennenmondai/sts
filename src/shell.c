@@ -1,7 +1,13 @@
+#include <sys/wait.h>
+
 #include "log.h"
 #include "sts.h"
 #include "shell.h"
 #include "shell_commands.h"
+
+#define STS_TOK_BUFFSIZE 64
+#define STS_RL_BUFFSIZE  1024
+#define STS_TOK_DELIM    " \t\r\n\a"
 
 static char *builtin_cmd[] = {
         "start",

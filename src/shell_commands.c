@@ -1,8 +1,8 @@
 #include "log.h"
-#include "mqtt.h"
-#include "shell.h"
 #include "sts.h"
+#include "mqtt.h"
 #include "tools.h"
+#include "shell.h"
 
 int sts_status(char **argv)
 {

@@ -161,9 +161,7 @@ void sha256_test(void)
                 TESTS("TESTS PASSED: %d/%d\n", count, NUMBER_TESTS);
                 INFO("----------------------------------------->\n\n");
 
-        }
-
-        else {
+        } else {
                 TESTS("TESTS FAILED: %d/%d\n", count, NUMBER_TESTS);
                 INFO("----------------------------------------->\n\n");
         }

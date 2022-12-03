@@ -39,7 +39,6 @@ void mqtt_test(void)
 
         } else {
                 TESTS("test 2.0: mqtt_subscribe() FAILED!\n");
-
         }
 
         ret = mqtt_publish("Hello World!");
@@ -50,12 +49,11 @@ void mqtt_test(void)
 
         } else {
                 TESTS("test 3.0: mqtt_publish() FAILED!\n");
-
         }
 
         /* kill thread and give it time to close up */
         ctx->thrd_msg_type = STS_KILL_THREAD;
-        sleep(2);
+        sleep(1);
 
         ret = mqtt_unsubscribe();
 
@@ -65,7 +63,6 @@ void mqtt_test(void)
 
         } else {
                 TESTS("test 4.0: mqtt_unsubscribe() FAILED!\n");
-
         }
 
         ret = mqtt_disconnect();
@@ -76,20 +73,16 @@ void mqtt_test(void)
 
         } else {
                 TESTS("test 5.0: mqtt_disconnect() FAILED!\n\n");
-
         }
 
         if (count == NUMBER_TESTS) {
                 TESTS("TESTS PASSED: %d/%d\n", count, NUMBER_TESTS);
                 INFO("----------------------------------------->\n\n");
 
-        }
-
-        else {
+        } else {
                 TESTS("TESTS FAILED: %d/%d\n", count, NUMBER_TESTS);
                 INFO("----------------------------------------->\n\n");
         }
-
         printf("\n");
 }
 

@@ -1,4 +1,4 @@
-url  = broker.hivemq.com 
+url  = localhost
 port = 1883
 username = nosec
 password = nosec

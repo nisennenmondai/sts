@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "sts.h"
 #include "log.h"
+#include "sts.h"
 #include "tools.h"
 
 #include "mbedtls/ctr_drbg.h"

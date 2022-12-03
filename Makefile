@@ -28,7 +28,7 @@ LDLIBS += -Wl,-rpath=$(PWD)/lib/paho-mqtt/MQTTClient-C/src
 all: $(EXE)
 
 $(EXE): $(OBJ) | $(BIN_DIR)
-	$(CC) -o $@ $^ $(LDLIBS)
+	$(CC) $^ $(LDLIBS) -o $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
