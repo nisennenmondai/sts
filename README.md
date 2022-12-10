@@ -33,6 +33,10 @@ STS uses a number of open source projects to work properly:
     implements cryptographic primitives, X.509 certificate manipulation and the 
     SSL/TLS and DTLS protocols.
 
+```sh
+sudo apt install cmake
+```
+
 ## **Installation**
 
 ```sh
