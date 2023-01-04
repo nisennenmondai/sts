@@ -34,7 +34,7 @@ STS uses a number of open source projects to work properly:
     SSL/TLS and DTLS protocols.
 
 ```sh
-sudo apt install cmake
+sudo apt install cmake g++
 ```
 
 ## **Installation**
