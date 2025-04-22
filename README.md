@@ -37,13 +37,13 @@ STS uses a number of open source projects to work properly:
 sudo apt install cmake g++
 ```
 
-## **Installation**
+## **Build**
 
 ```sh
 make deps
 make
 ```
-- **make deps** will download and build *paho-mqtt* and *mbedtls*
+- **make deps** will download and build *paho-mqtt* and *mbedtls* (CMake version of mbedtls and paho-mqtt must be updated for compatibility)
 - **make** will build *sts*
 
 ## **Tests**
