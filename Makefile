@@ -47,8 +47,8 @@ run-tests:
 
 deps:
 	git submodule update --init --recursive
-	cd lib/paho-mqtt/; cmake .; make
-	cd lib/mbedtls/; cmake -DUSE_SHARED_MBEDTLS_LIBRARY=On .; make mbedcrypto
+	cd lib/paho-mqtt/; cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .; make
+	cd lib/mbedtls/; cmake -DUSE_SHARED_MBEDTLS_LIBRARY=On -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .; make mbedcrypto
 
 clean:
 	@$(RM) -rv $(BIN_DIR) $(OBJ_DIR)
