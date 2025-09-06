@@ -43,7 +43,7 @@ sudo apt install cmake g++
 make deps
 make
 ```
-- **make deps** will download and build *paho-mqtt* and *mbedtls* (CMake version of mbedtls and paho-mqtt must be updated for compatibility)
+- **make deps** will download and build *paho-mqtt* and *mbedtls* (CMake version of mbedtls and paho-mqtt might need to be updated for compatibility)
 - **make** will build *sts*
 
 ## **Tests**
